@@ -1,0 +1,15 @@
+# Confront: regress per-capita growth on population. For logistic growth the
+# intercept (slot 6) is r and the slope (slot 7) is -r / capacity.
+inputs:
+  obs:
+    source:
+      csv: {path: data/obs.csv, time_column: 0, skip_header: true, state_columns: {population: [1], growth: [2]}}
+macros:
+- type: scalar_regression_stats
+  name: ols
+  y: {partition_name: growth}
+  x: {partition_name: population}
+  intercept: true
+  mode: cumulative
+outputs:
+- {name: beliefs, function: {type: json_log, path: out/confront.log}}

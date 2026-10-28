@@ -1,0 +1,19 @@
+# The hidden truth behind data/obs.csv: logistic growth with process noise.
+# It stands in for the real world, so the model under test never reads it.
+main:
+  partitions:
+  - name: population
+    params: {r: [0.3], capacity: [100.0], noise: [0.03]}
+    init_state_values: [5.0]
+    state_history_depth: 1
+    seed: 7
+  expressions:
+  - partition: population
+    fields: [{name: x}]
+    outputs: ["max(x + r * x * (1 - x / capacity) * dt + noise * x * shared(normal(0, 1)), 0.1)"]
+  simulation:
+    termination_condition: {type: number_of_steps, max_steps: 40}
+    timestep_function: {type: constant, stepsize: 1.0}
+    init_time_value: 0.0
+outputs:
+- {name: truth, function: {type: json_log, path: data/truth.log}}

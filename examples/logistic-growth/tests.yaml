@@ -1,0 +1,12 @@
+# Check specs. Each script prints one JSON object on its last line.
+checks:
+- id: backtest-population
+  partitions: [population]
+  kind: backtest
+  script: analysis/backtest.py
+  train_end: 24
+  test_start: 25
+- id: density-dependence
+  partitions: [population]
+  kind: process
+  script: analysis/process_check.py
