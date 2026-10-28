@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Keep in step with STOCHADEX_VERSION in robert/__init__.py.
+      STOCHADEX_VERSION: v0.23.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the pinned stochadex
+        run: |
+          git clone --depth 1 --branch "$STOCHADEX_VERSION" https://github.com/umbralcalc/stochadex /tmp/stochadex
+          mkdir -p "$HOME/bin"
+          (cd /tmp/stochadex/cmd/stochadex && CGO_ENABLED=0 go build -ldflags "-X main.version=$STOCHADEX_VERSION" -o "$HOME/bin/stochadex" .)
+          (cd /tmp/stochadex && go build -o "$HOME/bin/stochadex-graph" ./cmd/stochadex-graph)
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+      - run: pip install -e '.[dev]'
+      - run: robert doctor
+      - run: pytest -q

@@ -1,0 +1,27 @@
+# v0: unconstrained growth with a weak seasonal nuisance.
+main:
+  partitions:
+  - name: season
+    params: {amplitude: [0.005], period: [12.0]}
+    init_state_values: [0.0]
+    state_history_depth: 1
+    seed: 1
+  - name: population
+    params: {r: [0.3], noise: [0.01]}
+    init_state_values: [5.0]
+    state_history_depth: 1
+    seed: 3
+  expressions:
+  - partition: season
+    fields: [{name: s}]
+    outputs: ["amplitude * sin(2 * pi * t / period)"]
+  - partition: population
+    fields: [{name: x}]
+    upstreams: {season: season}
+    outputs: ["max(x + (r + season[0]) * x * dt + noise * x * shared(normal(0, 1)), 0.1)"]
+  simulation:
+    termination_condition: {type: number_of_steps, max_steps: 39}
+    timestep_function: {type: constant, stepsize: 1.0}
+    init_time_value: 0.0
+outputs:
+- {name: model, function: {type: json_log, path: out/model.log}}
