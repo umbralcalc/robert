@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from . import SKILLS_VERSION, STOCHADEX_VERSION, __version__
+from . import __version__, deps
 from . import graph as graphs
 from .checks import Gate, harness_twice, run_script
 from .contracts import (
@@ -30,7 +30,14 @@ from .contracts import (
 from .engine import Engine
 from .outputs import mean_sd, read
 from .project import MethodError, Project, now, sha256_file
-from .scaffold import AGENTS_MD, GITIGNORE, LICENCES_YAML, TESTS_YAML, mcp_json
+from .scaffold import (
+    AGENTS_MD,
+    GITIGNORE,
+    LICENCES_YAML,
+    TESTS_YAML,
+    devcontainer_json,
+    mcp_json,
+)
 
 # --- variants -------------------------------------------------------------
 
@@ -111,8 +118,9 @@ def init(path: str, name: str, description: str, level: str,
         "name": name,
         "created": now(),
         "robert_version": __version__,
-        "skills_version": SKILLS_VERSION,
-        "stochadex_version": STOCHADEX_VERSION,
+        "skills_version": __version__,
+        # The version the project is created against; later runs resolve it first.
+        "stochadex_version": found or deps.lock()["version"],
         "steps": {},
     })
     project.write_yaml("domain.yaml", {
@@ -125,6 +133,7 @@ def init(path: str, name: str, description: str, level: str,
         "AGENTS.md": AGENTS_MD.format(name=name),
         ".mcp.json": mcp_json(),
         ".cursor/mcp.json": mcp_json(),
+        ".devcontainer/devcontainer.json": devcontainer_json(),
         ".gitignore": GITIGNORE,
         "tests.yaml": TESTS_YAML,
         "data/licences.yaml": LICENCES_YAML,
@@ -143,9 +152,10 @@ def init(path: str, name: str, description: str, level: str,
     gate = Gate("init")
     gate.all("domain interview complete", check_domain(project.read_yaml("domain.yaml")))
     gate.check("stochadex found", found is not None,
-               found or "install stochadex or set STOCHADEX_BIN")
-    if found and found != STOCHADEX_VERSION:
-        gate.note(f"stochadex {found} found; this robert pins {STOCHADEX_VERSION}")
+               found or engine.resolved.problem or "")
+    if found and found != deps.lock()["version"]:
+        gate.note(f"stochadex {found} found; this robert release locks "
+                  f"{deps.lock()['version']}")
     return _done(project, gate, [".robert/project.yaml", "domain.yaml", *files],
                  "pose", "init", root=str(root))
 

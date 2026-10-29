@@ -2,20 +2,23 @@
 
 robert never reimplements what stochadex does: validation is `--check`, what a run
 reads and writes is `inspect --io`, what it was made from is `--provenance`, and the
-partition graph is `stochadex-graph`. Every call runs with the project root as its
+partition graph is `stochadex graph` (the separate `stochadex-graph` before v0.24).
+Which binary runs is decided by `deps.resolve`: the project's pinned version first,
+always within robert's supported range. Every call runs with the project root as its
 working directory, so relative paths in a config mean the same thing everywhere.
 """
 
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from . import deps
 from .project import MethodError
 
 # stochadex classifies every failure by exit code (see api.ExitCode).
@@ -29,16 +32,6 @@ EXIT_MEANING = {
 }
 
 PROVENANCE_SUFFIX = ".provenance.json"
-
-
-def _which(env: str, name: str, sibling_of: str | None = None) -> str | None:
-    if os.environ.get(env):
-        return os.environ[env]
-    if sibling_of:
-        candidate = Path(sibling_of).with_name(name)
-        if candidate.exists():
-            return str(candidate)
-    return shutil.which(name)
 
 
 def _json_tail(text: str) -> Any:
@@ -67,26 +60,31 @@ class Result:
         return out
 
 
+def project_pin(root: Path) -> str | None:
+    """The stochadex version a project was created against, if it is a project."""
+    meta = Path(root) / ".robert/project.yaml"
+    if not meta.exists():
+        return None
+    return (yaml.safe_load(meta.read_text()) or {}).get("stochadex_version")
+
+
 class Engine:
-    def __init__(self, root: Path):
+    """A stochadex binary resolved for one project root (see `deps.resolve`)."""
+
+    def __init__(self, root: Path | str):
         self.root = Path(root)
-        self.bin = _which("STOCHADEX_BIN", "stochadex")
-        self.graph_bin = _which("STOCHADEX_GRAPH_BIN", "stochadex-graph", self.bin)
+        self.resolved = deps.resolve(project_pin(self.root))
+        self.bin = self.resolved.binary
 
     # --- plumbing ---------------------------------------------------------
 
-    def _require(self, binary: str | None, name: str) -> str:
-        if not binary:
-            raise MethodError(
-                f"`{name}` not found. Install the stochadex release this project pins "
-                "(see `robert doctor`) or set STOCHADEX_BIN / STOCHADEX_GRAPH_BIN."
-            )
-        return binary
-
-    def _call(self, args: list[str], binary: str | None = None) -> Result:
-        exe = self._require(binary or self.bin, "stochadex")
+    def _call(self, args: list[str], argv: list[str] | None = None) -> Result:
+        if argv is None:
+            if not self.bin:
+                raise MethodError(self.resolved.problem or "stochadex is not installed")
+            argv = [self.bin]
         proc = subprocess.run(
-            [exe, *args], cwd=self.root, capture_output=True, text=True
+            [*argv, *args], cwd=self.root, capture_output=True, text=True
         )
         return Result(
             ok=proc.returncode == 0,
@@ -106,12 +104,17 @@ class Engine:
     # --- the stochadex surface robert uses ---------------------------------
 
     def version(self) -> str | None:
-        if not self.bin:
-            return None
-        r = self._call(["--version"])
-        # "stochadex v0.23.0 darwin/arm64"
-        parts = r.stdout.split()
-        return parts[1] if r.ok and len(parts) > 1 else None
+        return self.resolved.version
+
+    def catalogue(self) -> dict[str, Any]:
+        """What this build registers, as stochadex reports it (from v0.24)."""
+        if not self.resolved.has_catalogue:
+            raise MethodError(f"stochadex {self.version()} has no `catalogue` command; "
+                              "it arrives in v0.24")
+        r = self._call(["catalogue"])
+        if not r.ok:
+            raise MethodError(f"stochadex catalogue failed: {r.summary()['error']}")
+        return _json_tail(r.stdout)
 
     def check(self, config: str, sets: list[str] | None = None) -> Result:
         return self._call(["--config", config, "--check", *self._sets(sets)])
@@ -158,5 +161,9 @@ class Engine:
         return outs
 
     def graph(self, config: str, fmt: str = "dot") -> Result:
-        exe = self._require(self.graph_bin, "stochadex-graph")
-        return self._call(["--config", config, "--format", fmt], binary=exe)
+        if self.resolved.graph is None:
+            raise MethodError(
+                f"stochadex {self.version()} cannot render the partition graph: before "
+                "v0.24 it needs the separate stochadex-graph binary (`robert setup` "
+                "installs it when Go is available)")
+        return self._call(["--config", config, "--format", fmt], argv=self.resolved.graph)

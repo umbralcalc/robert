@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 
+from . import __version__
+
 AGENTS_MD = """\
 # {name}
 
@@ -57,6 +59,22 @@ MCP_SERVER = {"command": "robert", "args": ["mcp"]}
 
 def mcp_json() -> str:
     return json.dumps({"mcpServers": {"robert": MCP_SERVER}}, indent=2) + "\n"
+
+
+IMAGE = "ghcr.io/umbralcalc/robert"
+
+
+def devcontainer_json() -> str:
+    """Open the project in Codespaces, a dev pod or a cloud agent with robert and the
+    pinned stochadex already installed: the robert image of this robert version."""
+    return json.dumps({
+        "name": "robert project",
+        "image": f"{IMAGE}:{__version__}",
+        "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+        "postCreateCommand": "robert doctor",
+        "customizations": {"vscode": {"extensions": ["ms-python.python",
+                                                      "bierner.markdown-mermaid"]}},
+    }, indent=2) + "\n"
 
 
 GITIGNORE = """\

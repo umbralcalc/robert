@@ -1,0 +1,23 @@
+{
+  "id": "robert",
+  "version": "0.1.0",
+  "name": "robert (AI simulation scientist)",
+  "description": "Installs robert and the stochadex release it locks, so any dev container, Codespace or cloud coding agent can drive stochadex projects through robert's MCP server.",
+  "documentationURL": "https://github.com/umbralcalc/robert",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "robert-ai release to install, or 'latest'"
+    },
+    "accelerated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Install the BLAS + DuckDB stochadex build instead of the portable one"
+    }
+  },
+  "containerEnv": {
+    "ROBERT_HOME": "/usr/local/share/robert"
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/python"]
+}

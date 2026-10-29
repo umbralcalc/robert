@@ -7,7 +7,9 @@ agent-specific hooks.
 
 from __future__ import annotations
 
+import hmac
 import json
+import os
 from typing import Any
 
 import anyio
@@ -71,3 +73,42 @@ def serve() -> None:
             await server.run(read, write, server.create_initialization_options())
 
     anyio.run(main)
+
+
+LOOPBACK = ("127.0.0.1", "localhost", "::1")
+
+
+class BearerToken:
+    """Refuse any request without `Authorization: Bearer $ROBERT_MCP_TOKEN`."""
+
+    def __init__(self, app: Any, token: str):
+        self.app, self.expected = app, f"Bearer {token}".encode()
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] == "http":
+            got = dict(scope.get("headers") or []).get(b"authorization", b"")
+            if not hmac.compare_digest(got, self.expected):
+                await send({"type": "http.response.start", "status": 401,
+                            "headers": [(b"content-type", b"text/plain"),
+                                        (b"www-authenticate", b"Bearer")]})
+                await send({"type": "http.response.body", "body": b"unauthorized\n"})
+                return
+        await self.app(scope, receive, send)
+
+
+def http_app(host: str = "127.0.0.1", token: str | None = None) -> Any:
+    """Streamable HTTP at /mcp, for agents that reach robert over the network (a
+    dev pod, a cloud agent's sidecar). Loopback gets DNS-rebinding protection; any
+    other bind address must carry a bearer token."""
+    token = token or os.environ.get("ROBERT_MCP_TOKEN")
+    if host not in LOOPBACK and not token:
+        raise MethodError(f"refusing to serve on {host} without a token: set "
+                          "ROBERT_MCP_TOKEN, or bind to 127.0.0.1")
+    app = build().streamable_http_app(host=host)
+    return BearerToken(app, token) if token else app
+
+
+def serve_http(host: str = "127.0.0.1", port: int = 8765) -> None:
+    import uvicorn
+
+    uvicorn.run(http_app(host), host=host, port=port, log_level="info")

@@ -1,0 +1,22 @@
+{
+  "name": "robert (development)",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/robert",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/robert,type=bind",
+  "containerUser": "robert",
+  "postCreateCommand": "pip install --user -e '.[dev]' && robert doctor",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "bierner.markdown-mermaid"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "PATH": "/home/robert/.local/bin:${containerEnv:PATH}"
+  }
+}

@@ -1,0 +1,90 @@
+name: Update stochadex
+# Weekly (or on demand): if stochadex has published a newer release, move the lock to
+# it (checksums from the release's own SHA256SUMS), widen the supported range if it is
+# a new minor, run the whole test suite against it, and open a PR. A PR whose tests
+# fail is still opened, marked as such: the failure is the news.
+#
+# PRs opened with GITHUB_TOKEN do not trigger CI; set ROBERT_BOT_TOKEN (a fine-grained
+# PAT with contents and pull-requests write) so CI runs on the update PR too.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "stochadex version to move to, e.g. v0.24.0 (default: latest)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-stochadex
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.ROBERT_BOT_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ROBERT_BOT_TOKEN || github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - run: pip install -e '.[dev]'
+      - id: bump
+        name: Move the lock
+        run: |
+          set -euo pipefail
+          out=$(python -m robert.deps bump ${{ inputs.version }})
+          echo "$out"
+          echo "changed=$(echo "$out" | python -c 'import json,sys;print(str(json.load(sys.stdin)["changed"]).lower())')" >> "$GITHUB_OUTPUT"
+          echo "version=$(echo "$out" | python -c 'import json,sys;print(json.load(sys.stdin)["version"])')" >> "$GITHUB_OUTPUT"
+      - id: test
+        if: steps.bump.outputs.changed == 'true'
+        name: Test against the new release
+        continue-on-error: true
+        run: |
+          robert setup --no-agents
+          robert doctor
+          pytest -q 2>&1 | tee pytest.log
+      - name: Open the PR
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+          TESTS: ${{ steps.test.outcome }}
+        run: |
+          set -euo pipefail
+          branch="update-stochadex-${VERSION}"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "$branch already exists; nothing to do."; exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add robert/stochadex.json
+          git commit -m "Lock stochadex ${VERSION}"
+          git push -u origin "$branch"
+          {
+            echo "Moves robert's stochadex lock to [${VERSION}](https://github.com/umbralcalc/stochadex/releases/tag/${VERSION})."
+            echo
+            echo "- Checksums come from the release's SHA256SUMS."
+            echo "- The full test suite ran against it: **${TESTS}**."
+            echo
+            echo "Before merging: add a CHANGELOG entry, and update the Dockerfile's"
+            echo "STOCHADEX_VERSION default (and drop its graph stage once this is >= v0.24)."
+            if [ "$TESTS" != "success" ]; then
+              echo; echo '<details><summary>Test output</summary>'; echo; echo '```'
+              tail -60 pytest.log; echo '```'; echo '</details>'
+            fi
+          } > body.md
+          title="Lock stochadex ${VERSION}"
+          [ "$TESTS" = "success" ] || title="${title} (tests failing)"
+          gh pr create --base main --head "$branch" --title "$title" --body-file body.md

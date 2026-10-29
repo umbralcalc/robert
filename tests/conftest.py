@@ -13,12 +13,12 @@ EXAMPLE = REPO / "examples/logistic-growth"
 
 def _have_stochadex() -> bool:
     e = Engine(REPO)
-    return bool(e.bin and e.graph_bin)
+    return bool(e.bin and e.resolved.graph)
 
 
 needs_stochadex = pytest.mark.skipif(
     not _have_stochadex(),
-    reason="stochadex and stochadex-graph not found (set STOCHADEX_BIN / put them on PATH)",
+    reason="stochadex not installed: run `robert setup --no-agents`",
 )
 
 
