@@ -91,7 +91,10 @@ def binary_version(path: str) -> str | None:
                              timeout=30).stdout.split()
     except (OSError, subprocess.TimeoutExpired):
         return None
-    return out[1] if len(out) > 1 and out[0] == "stochadex" else None
+    if len(out) < 2 or out[0] != "stochadex":
+        return None
+    # Release binaries say "v0.23.0" and the OCI image says "0.23.0"; keep one form.
+    return out[1] if out[1].startswith("v") or not out[1][:1].isdigit() else "v" + out[1]
 
 
 @dataclass

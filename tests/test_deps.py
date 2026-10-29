@@ -77,6 +77,12 @@ def test_install_writes_a_verified_binary(fake_home, monkeypatch, lock_copy):
     assert deps.resolve().source == "managed"
 
 
+def test_image_style_version_matches_the_lock(fake_home, monkeypatch, tmp_path):
+    """The stochadex image stamps "0.23.0" where release binaries say "v0.23.0"."""
+    monkeypatch.setenv("STOCHADEX_BIN", str(fake_stochadex(tmp_path / "img/stochadex", "0.23.0")))
+    assert deps.resolve().version == deps.lock()["version"]
+
+
 def test_resolve_rejects_unsupported_versions(fake_home, monkeypatch, tmp_path):
     old = fake_stochadex(tmp_path / "old/stochadex", "v0.19.0")
     monkeypatch.setenv("STOCHADEX_BIN", str(old))
