@@ -1,0 +1,129 @@
+name: Release
+# On every version tag: check the tag matches the code, run the tests, then publish
+#
+#   - the robert-ai sdist and wheel to PyPI (trusted publishing: no stored token; the
+#     PyPI project must list this repo + workflow + the `pypi` environment), and to the
+#     GitHub Release with install.sh and the changelog section as notes;
+#   - the image ghcr.io/umbralcalc/robert:<version> and :latest, for amd64 and arm64,
+#     built on the stochadex image robert/stochadex.json locks;
+#   - the Dev Container Feature ghcr.io/umbralcalc/robert/robert.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      stochadex: ${{ steps.meta.outputs.stochadex }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: meta
+        name: Check the tag against the code
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          code=$(sed -nE 's/^__version__ = "([^"]+)"/\1/p' robert/__init__.py)
+          [ "$code" = "$version" ] || { echo "::error::tag ${GITHUB_REF_NAME} but code ${code}"; exit 1; }
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "stochadex=$(python -c 'import json;print(json.load(open("robert/stochadex.json"))["version"].lstrip("v"))')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Test against the locked stochadex
+        run: |
+          pip install -e '.[dev]'
+          robert setup --no-agents
+          robert doctor
+          pytest -q
+      - name: Build the distributions
+        run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - run: |
+          set -euo pipefail
+          bash .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" CHANGELOG.md > notes.md
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" \
+                 --notes-file notes.md --verify-tag
+          gh release upload "$GITHUB_REF_NAME" dist/* install.sh --clobber
+
+  image:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            STOCHADEX_VERSION=${{ needs.build.outputs.stochadex }}
+            VERSION=${{ needs.build.outputs.version }}
+            REVISION=${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest
+
+  feature:
+    # The feature installs robert-ai from PyPI, so publish it only once PyPI has it.
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: devcontainers/action@v1
+        with:
+          publish-features: "true"
+          base-path-to-features: ./devcontainer-features/src
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

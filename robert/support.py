@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib.util
 from typing import Any
 
-from . import STOCHADEX_VERSION
+from . import __version__, deps
 from . import graph as graphs
 from .contracts import check_intervention
 from .engine import Engine
@@ -172,14 +172,30 @@ def intervene(project: Project, step: str, actor: str, agent_proposal: str,
 
 
 def doctor(project: Project | None = None) -> dict[str, Any]:
-    """Check the toolchain: stochadex binaries, their version, optional extras."""
+    """Check the toolchain against robert's stochadex lock and the project's pin."""
     engine = Engine(project.root if project else ".")
-    found = engine.version()
-    pinned = (project.meta().get("stochadex_version") if project else None) or STOCHADEX_VERSION
+    r = engine.resolved
+    lock = deps.lock()
+    wanted = (project.meta().get("stochadex_version") if project else None) or lock["version"]
+    problems = []
+    if r.binary is None:
+        problems.append(r.problem)
+    elif r.version != wanted:
+        problems.append(f"using stochadex {r.version} but "
+                        f"{'the project pins' if project else 'robert locks'} {wanted}; "
+                        f"run `robert setup --stochadex {wanted}`")
+    if r.binary and r.graph is None:
+        problems.append("no partition graph renderer (stochadex < v0.24 without "
+                        "stochadex-graph); `robert setup` installs it when Go is available")
     return {
-        "stochadex": engine.bin, "stochadex_version": found, "pinned": pinned,
-        "version_ok": found == pinned,
-        "stochadex_graph": engine.graph_bin,
+        "ok": not problems,
+        "problems": problems,
+        "robert_version": __version__,
+        "stochadex": {"path": r.binary, "version": r.version, "source": r.source,
+                      "wanted": wanted, "supported": deps.range_text(),
+                      "locked": lock["version"],
+                      "graph": " ".join(r.graph) if r.graph else None,
+                      "catalogue": r.has_catalogue},
+        "managed_home": str(deps.home()),
         "arrow_support": importlib.util.find_spec("pyarrow") is not None,
-        "install": "https://github.com/umbralcalc/stochadex/releases/tag/" + pinned,
     }

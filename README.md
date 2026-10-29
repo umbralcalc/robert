@@ -41,45 +41,91 @@ project driven through chat leaves the same trail as one driven by hand.
 
 ## Install
 
-robert needs the stochadex CLI and `stochadex-graph`, pinned to the version in
-`robert/__init__.py` (currently v0.23.0):
-
 ```bash
-git clone --branch v0.23.0 https://github.com/umbralcalc/stochadex /tmp/stochadex
+curl -fsSL https://raw.githubusercontent.com/umbralcalc/robert/main/install.sh | sh
 ```
 
-```bash
-(cd /tmp/stochadex/cmd/stochadex && CGO_ENABLED=0 go build -o ~/.local/bin/stochadex .)
-```
+The installer puts the `robert-ai` package in an isolated tool environment, using uv
+if you have it, then pipx, and otherwise it installs uv first. It then runs
+`robert setup`, which:
+
+- downloads the stochadex release robert locks into `~/.robert/stochadex/<version>/`
+  and checks it against the SHA-256 recorded in `robert/stochadex.json`;
+- installs the Claude Code plugin (both skills and the MCP server) when `claude` is
+  on PATH, and adds the MCP server to `~/.cursor/mcp.json` when Cursor is installed.
+
+Run `robert doctor` at any time to check the toolchain. Re-running `robert setup`
+repairs or upgrades the install, and `robert setup --accelerated` swaps in the BLAS +
+DuckDB build of stochadex. Set `ROBERT_VERSION=0.2.0` to install a specific release,
+or `ROBERT_NO_AGENTS=1` to skip agent registration.
+
+Until the first PyPI release is out, install from GitHub instead:
 
 ```bash
-(cd /tmp/stochadex && go build -o ~/.local/bin/stochadex-graph ./cmd/stochadex-graph)
+curl -fsSL https://raw.githubusercontent.com/umbralcalc/robert/main/install.sh | ROBERT_SOURCE=git+https://github.com/umbralcalc/robert sh
 ```
 
-Then install robert and check the toolchain:
+### How robert depends on stochadex
 
-```bash
-pip install -e '.[dev]'
-```
+robert never bundles stochadex. It locks one release and declares the range it
+supports, in [robert/stochadex.json](robert/stochadex.json):
 
-```bash
-robert doctor
-```
+| Rule | Effect |
+| --- | --- |
+| Resolution order | `STOCHADEX_BIN`, then the managed install of the wanted version, then PATH |
+| Version range | Any binary outside the supported range is refused, with the fix |
+| Checksums | A download that doesn't match the lock (or the release's `SHA256SUMS`) is never installed |
+| Project pin | Each project records the stochadex version it was created with; `doctor` flags drift |
+| Updates | A weekly workflow moves the lock to the newest release, tests it, and opens a PR |
+
+stochadex v0.24 adds `stochadex graph` and `stochadex catalogue`, which replace the
+separate `stochadex-graph` binary and give robert a machine-readable contract. Until
+the lock reaches v0.24, `robert setup` builds `stochadex-graph` with Go when Go is
+available.
 
 ## Connect an agent
 
+`robert setup` already registers Claude Code and Cursor. To do it by hand:
+
 | Agent | How |
 | --- | --- |
-| Claude Code | `/plugin marketplace add umbralcalc/robert`, then install `robert`. This adds both skills and the MCP server. |
-| Cursor | Copy `adapters/cursor/rules/` into `.cursor/rules/` and `adapters/cursor/mcp.json` into `.cursor/mcp.json`. |
+| Claude Code | `claude plugin marketplace add umbralcalc/robert`, then `claude plugin install robert@robert`. This adds both skills and the MCP server. |
+| Cursor | Add `adapters/cursor/mcp.json` to `~/.cursor/mcp.json`, and copy `adapters/cursor/rules/` into a project's `.cursor/rules/`. |
 | Anything else | Point it at `adapters/agents/AGENTS.md` and run `robert mcp` as a stdio MCP server. |
 
 Every project that `robert init` creates also contains its own `.mcp.json`,
-`.cursor/mcp.json` and `AGENTS.md`, so any agent opened in it finds the tools.
+`.cursor/mcp.json`, `AGENTS.md` and `.devcontainer/`, so any agent opened in it
+finds the tools.
 
 The skills in `skills/` are the single source of method content. After you edit
 one, run `robert adapters` to regenerate the Cursor rules, `AGENTS.md` and the
-plugin manifest. A test fails if they drift.
+plugin manifest. CI fails if they drift.
+
+## In the cloud
+
+| Route | How |
+| --- | --- |
+| Image | `ghcr.io/umbralcalc/robert:<version>` contains robert, the locked stochadex (accelerated build), Python and git. Run `docker run --rm -it -v "$PWD:/work" ghcr.io/umbralcalc/robert status`. |
+| Dev container / Codespaces | Projects from `robert init` open in the robert image. For any other repo, add the feature `"ghcr.io/umbralcalc/robert/robert:0": {}` to its `devcontainer.json`. |
+| Cloud coding agents | Use the one-line installer with `ROBERT_NO_AGENTS=1` as the environment's setup script, or start the agent in the robert image. |
+| MCP over the network | `robert mcp --http` serves streamable HTTP at `http://127.0.0.1:8765/mcp`. Binding to anything else requires a bearer token: `ROBERT_MCP_TOKEN=... robert mcp --http --host 0.0.0.0`. |
+
+## Releases
+
+Versions follow SemVer, pre-1.0, so a minor bump may break the CLI, the tool
+schemas or the file contracts. [CHANGELOG.md](CHANGELOG.md) has the policy.
+`robert/__init__.py` holds the only version number; the package, the plugin
+manifests and every project's recorded skills version all read it.
+
+To release, run the **Prepare release PR** workflow with the new version. It turns
+the `[Unreleased]` changelog section into the release and bumps the version. Review
+and merge that PR. `tag-release.yml` then tags the merge commit, and `release.yml`
+tests and publishes:
+
+- the `robert-ai` package to PyPI, through a trusted publisher;
+- the GitHub Release, with the changelog section as its notes;
+- the image to GHCR, for amd64 and arm64;
+- the Dev Container Feature.
 
 ## Worked example
 
@@ -117,6 +163,8 @@ This runs the whole loop against real stochadex runs:
 | Path | What |
 | --- | --- |
 | `robert/` | The method CLI and MCP server (`tools.py` is the single registry) |
+| `robert/stochadex.json`, `robert/deps.py` | The stochadex lock, resolver and installer |
+| `install.sh`, `Dockerfile`, `devcontainer-features/` | Install routes: one line, image, dev container |
 | `skills/simulation-scientist/` | The method skill |
 | `skills/stochadex-model/` | The model-authoring skill, moved from stochadex v0.23.0 |
 | `adapters/`, `.claude-plugin/` | Generated per-agent adapters |
@@ -126,8 +174,15 @@ This runs the whole loop against real stochadex runs:
 ## Testing
 
 ```bash
+pip install -e '.[dev]'
+```
+
+```bash
+robert setup --no-agents
+```
+
+```bash
 pytest
 ```
 
-The loop and recipe tests run only when `stochadex` and `stochadex-graph` are on
-PATH, or set through `STOCHADEX_BIN` and `STOCHADEX_GRAPH_BIN`.
+The loop and recipe tests skip when no supported stochadex is installed.

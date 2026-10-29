@@ -1,6 +1,6 @@
 """The partition graph: the one canvas every loop step draws on.
 
-Exact within-step wiring comes from stochadex's own derivation (`stochadex-graph`),
+Exact within-step wiring comes from stochadex's own derivation (`stochadex graph`),
 so the picture cannot drift from the model. Lag-1 `upstreams` reads, which that
 derivation does not cover, are added as dashed hints. Each loop step then adds one
 overlay from the method sidecars, and nodes carry the user's domain terms.
@@ -72,7 +72,7 @@ def _parse_dot(dot: str) -> tuple[list[str], list[tuple[str, str, str]]]:
 def load(project: Project, config: str = "model/sim.yaml") -> Graph:
     r = Engine(project.root).graph(config, "dot")
     if not r.ok:
-        raise MethodError(f"stochadex-graph failed: {r.summary()['error']}")
+        raise MethodError(f"stochadex graph failed: {r.summary()['error']}")
     nodes, exact = _parse_dot(r.stdout)
     sim = project.read_yaml(config, {})
     hints = []

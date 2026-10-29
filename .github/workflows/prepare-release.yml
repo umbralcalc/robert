@@ -1,0 +1,104 @@
+name: Prepare release PR
+# The mechanical half of a release, on demand (same ritual as stochadex). You pick the
+# version; this opens a "Release vX.Y.Z" PR with the bookkeeping done:
+#
+#   - CHANGELOG.md: the [Unreleased] section becomes `## [X.Y.Z] — <today>`, with a
+#     fresh empty [Unreleased] above it and the compare links updated;
+#   - robert/__init__.py: __version__ = "X.Y.Z" (the single source of the version);
+#   - the Dev Container Feature's version, and the adapters `robert adapters` renders
+#     from __version__ (the Claude Code plugin manifests).
+#
+# You review the release notes in the PR and merge. On merge, tag-release.yml creates
+# the annotated vX.Y.Z tag at the merge commit and release.yml publishes it.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version as X.Y.Z (no leading v)"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Stamp the version and changelog, and open the PR
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::version must be X.Y.Z with no leading v; got '$VERSION'"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+            echo "::error::tag v$VERSION already exists"; exit 1
+          fi
+          if grep -qE "^## \[${VERSION//./\\.}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md already has a [$VERSION] heading"; exit 1
+          fi
+          if ! awk '/^## \[Unreleased\]/{f=1;next} /^## \[/{f=0} f && /^- /{n++} END{exit !n}' CHANGELOG.md; then
+            echo "::error::[Unreleased] has no entries: nothing to release"; exit 1
+          fi
+
+          prev=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
+          date=$(date -u +%Y-%m-%d)
+          repo="https://github.com/${GITHUB_REPOSITORY}"
+          if [ "$prev" = "none" ]; then
+            newlink="[${VERSION}]: ${repo}/releases/tag/v${VERSION}"
+          else
+            newlink="[${VERSION}]: ${repo}/compare/v${prev}...v${VERSION}"
+          fi
+
+          awk -v V="$VERSION" -v D="$date" -v NEW="$newlink" -v REPO="$repo" '
+            /^## \[Unreleased\]/ && !done {
+              print "## [Unreleased]"; print ""
+              print "## [" V "] \xe2\x80\x94 " D
+              done = 1; next
+            }
+            /^\[Unreleased\]:/ {
+              print "[Unreleased]: " REPO "/compare/v" V "...HEAD"; print NEW; next
+            }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
+
+          sed -i -E "s/^__version__ = \"[^\"]+\"/__version__ = \"${VERSION}\"/" robert/__init__.py
+          sed -i -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"${VERSION}\"/" \
+            devcontainer-features/src/robert/devcontainer-feature.json
+          pip install -e . >/dev/null
+          robert adapters
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="release-v${VERSION}"
+          git checkout -b "$branch"
+          git add -A
+          git commit -m "Release v${VERSION}"
+          git push -u origin "$branch"
+
+          cat > /tmp/pr-body.md <<EOF
+          Prepared by the **Prepare release PR** workflow (previous release: ${prev}):
+
+          - CHANGELOG.md: [Unreleased] is now \`## [${VERSION}] — ${date}\`;
+          - robert/__init__.py, the plugin manifests and the Dev Container Feature: ${VERSION}.
+
+          Review the release notes in CHANGELOG.md, then merge. On merge,
+          \`tag-release.yml\` tags \`v${VERSION}\` and \`release.yml\` publishes to PyPI
+          (robert-ai), GitHub Releases and GHCR. Push any commit to this branch to run CI.
+          EOF
+          gh pr create --base main --head "$branch" --title "Release v${VERSION}" \
+            --body-file /tmp/pr-body.md

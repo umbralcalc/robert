@@ -5,27 +5,64 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    runs-on: ubuntu-latest
-    env:
-      # Keep in step with STOCHADEX_VERSION in robert/__init__.py.
-      STOCHADEX_VERSION: v0.23.0
+    # Installs stochadex the way users do (`robert setup`: the locked release,
+    # checksum-verified), so the installer is tested on every change.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # Only for stochadex < v0.24, whose graph renderer is not a release asset.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - run: pip install -e '.[dev]'
+      - run: robert setup --no-agents
+      - run: robert doctor
+      - run: pytest -q
+      - name: Adapters are rendered from the current skills
+        run: robert adapters && git diff --exit-code
+
+  install-script:
+    # The one-line installer in a bare container with neither uv nor pipx.
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-      - uses: actions/setup-python@v5
+          go-version: "1.25"
+      - run: ROBERT_SOURCE="$PWD" ROBERT_NO_AGENTS=1 sh install.sh
+      - run: PATH="$HOME/.local/bin:$PATH" robert doctor
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - id: lock
+        run: echo "stochadex=$(python3 -c 'import json;print(json.load(open("robert/stochadex.json"))["version"].lstrip("v"))')" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
         with:
-          python-version: "3.12"
-      - name: Build the pinned stochadex
+          context: .
+          load: true
+          tags: robert:ci
+          build-args: STOCHADEX_VERSION=${{ steps.lock.outputs.stochadex }}
+      - name: The image runs the whole loop
         run: |
-          git clone --depth 1 --branch "$STOCHADEX_VERSION" https://github.com/umbralcalc/stochadex /tmp/stochadex
-          mkdir -p "$HOME/bin"
-          (cd /tmp/stochadex/cmd/stochadex && CGO_ENABLED=0 go build -ldflags "-X main.version=$STOCHADEX_VERSION" -o "$HOME/bin/stochadex" .)
-          (cd /tmp/stochadex && go build -o "$HOME/bin/stochadex-graph" ./cmd/stochadex-graph)
-          echo "$HOME/bin" >> "$GITHUB_PATH"
-      - run: pip install -e '.[dev]'
-      - run: robert doctor
-      - run: pytest -q
+          mkdir -p demo && chmod 777 demo
+          docker run --rm -v "$PWD/examples:/examples:ro" -v "$PWD/demo:/work" \
+            --entrypoint bash robert:ci /examples/logistic-growth/walkthrough.sh /work/p
