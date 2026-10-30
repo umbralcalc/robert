@@ -31,8 +31,6 @@ import httpx
 from .project import MethodError
 
 LOCK_PATH = Path(__file__).with_name("stochadex.json")
-GRAPH_SUBCOMMAND_SINCE = (0, 24, 0)
-CATALOGUE_SINCE = (0, 24, 0)
 
 
 def lock() -> dict[str, Any]:
@@ -102,12 +100,7 @@ class Resolved:
     binary: str | None
     version: str | None
     source: str
-    graph: list[str] | None  # argv prefix that renders the partition graph
     problem: str | None = None
-
-    @property
-    def has_catalogue(self) -> bool:
-        return bool(self.version) and parse(self.version) >= CATALOGUE_SINCE
 
 
 def resolve(wanted: str | None = None) -> Resolved:
@@ -130,22 +123,10 @@ def resolve(wanted: str | None = None) -> Resolved:
         elif not supported(found):
             problems.append(f"{path} ({source}) is {found}; robert supports {range_text()}")
         else:
-            return Resolved(path, found, source, _graph_argv(path, found))
+            return Resolved(path, found, source)
     problem = "; ".join(problems) or "stochadex is not installed"
-    return Resolved(None, None, "none", None,
+    return Resolved(None, None, "none",
                     problem + ". Run `robert setup` to install the pinned version.")
-
-
-def _graph_argv(binary: str, version: str) -> list[str] | None:
-    if parse(version) >= GRAPH_SUBCOMMAND_SINCE:
-        return [binary, "graph"]
-    # Before v0.24 the graph was a separate binary, not shipped as a release asset.
-    for candidate in (os.environ.get("STOCHADEX_GRAPH_BIN"),
-                      str(Path(binary).with_name("stochadex-graph")),
-                      shutil.which("stochadex-graph")):
-        if candidate and Path(candidate).exists():
-            return [candidate]
-    return None
 
 
 # --- installing -------------------------------------------------------------------
@@ -173,7 +154,7 @@ def _release_url(version: str, name: str) -> str:
 
 def expected_sha256(version: str, name: str) -> str:
     """The checksum to verify against: the lock's for the locked version, otherwise
-    the release's own SHA256SUMS (published from v0.24.0)."""
+    the release's own SHA256SUMS."""
     lk = lock()
     if version == lk["version"]:
         if name not in lk["sha256"]:
@@ -218,23 +199,7 @@ def install(version: str | None = None, accelerated: bool = False,
         os.replace(tmp.name, target)
         binary_version.cache_clear()
         result.update(status="installed", asset=name, sha256=got)
-    if parse(version) < GRAPH_SUBCOMMAND_SINCE:
-        result["graph"] = _install_legacy_graph(version, target.parent)
     return result
-
-
-def _install_legacy_graph(version: str, into: Path) -> str:
-    graph = into / "stochadex-graph"
-    if graph.exists():
-        return "already installed"
-    if not shutil.which("go"):
-        return ("not installed: stochadex < v0.24 ships no graph binary and Go is not on "
-                "PATH; `robert graph` will be unavailable until stochadex v0.24")
-    env = {**os.environ, "GOBIN": str(into)}
-    proc = subprocess.run(["go", "install", f"github.com/{lock()['repository']}/"
-                           f"cmd/stochadex-graph@{version}"], env=env,
-                          capture_output=True, text=True)
-    return "installed with go" if proc.returncode == 0 else f"go install failed: {proc.stderr[-300:]}"
 
 
 # --- moving the lock ---------------------------------------------------------------

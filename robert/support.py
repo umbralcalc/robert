@@ -184,18 +184,13 @@ def doctor(project: Project | None = None) -> dict[str, Any]:
         problems.append(f"using stochadex {r.version} but "
                         f"{'the project pins' if project else 'robert locks'} {wanted}; "
                         f"run `robert setup --stochadex {wanted}`")
-    if r.binary and r.graph is None:
-        problems.append("no partition graph renderer (stochadex < v0.24 without "
-                        "stochadex-graph); `robert setup` installs it when Go is available")
     return {
         "ok": not problems,
         "problems": problems,
         "robert_version": __version__,
         "stochadex": {"path": r.binary, "version": r.version, "source": r.source,
                       "wanted": wanted, "supported": deps.range_text(),
-                      "locked": lock["version"],
-                      "graph": " ".join(r.graph) if r.graph else None,
-                      "catalogue": r.has_catalogue},
+                      "locked": lock["version"]},
         "managed_home": str(deps.home()),
         "arrow_support": importlib.util.find_spec("pyarrow") is not None,
     }

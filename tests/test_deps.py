@@ -45,8 +45,8 @@ def test_lock_is_well_formed():
 
 
 def test_supported_range():
-    assert deps.supported("v0.23.0") and deps.supported("0.24.9")
-    assert not deps.supported("v0.22.9") and not deps.supported("v0.25.0")
+    assert deps.supported("v0.24.0") and deps.supported("0.24.9")
+    assert not deps.supported("v0.23.0") and not deps.supported("v0.25.0")
 
 
 @pytest.mark.parametrize("system,machine,accel,name", [
@@ -66,20 +66,20 @@ def test_install_refuses_a_checksum_mismatch(fake_home, monkeypatch):
 
 
 def test_install_writes_a_verified_binary(fake_home, monkeypatch, lock_copy):
-    payload = b"#!/bin/sh\necho 'stochadex v0.23.0 test/test'\n"
+    payload = f"#!/bin/sh\necho 'stochadex {deps.lock()['version']} test/test'\n".encode()
     lk = json.loads(lock_copy.read_text())
     lk["sha256"][deps.asset_name()] = hashlib.sha256(payload).hexdigest()
     lock_copy.write_text(json.dumps(lk))
     monkeypatch.setattr(deps, "_download", lambda url: payload)
-    monkeypatch.setattr(deps, "_install_legacy_graph", lambda v, d: "skipped")
     out = deps.install()
     assert out["status"] == "installed"
     assert deps.resolve().source == "managed"
 
 
 def test_image_style_version_matches_the_lock(fake_home, monkeypatch, tmp_path):
-    """The stochadex image stamps "0.23.0" where release binaries say "v0.23.0"."""
-    monkeypatch.setenv("STOCHADEX_BIN", str(fake_stochadex(tmp_path / "img/stochadex", "0.23.0")))
+    """The stochadex image stamps "0.24.0" where release binaries say "v0.24.0"."""
+    unprefixed = deps.lock()["version"].lstrip("v")
+    monkeypatch.setenv("STOCHADEX_BIN", str(fake_stochadex(tmp_path / "img/stochadex", unprefixed)))
     assert deps.resolve().version == deps.lock()["version"]
 
 
@@ -92,10 +92,9 @@ def test_resolve_rejects_unsupported_versions(fake_home, monkeypatch, tmp_path):
 
 def test_resolve_prefers_the_wanted_managed_version(fake_home, monkeypatch, tmp_path):
     fake_stochadex(deps.managed_binary("v0.24.1"), "v0.24.1")
-    monkeypatch.setenv("PATH", str(fake_stochadex(tmp_path / "p/stochadex", "v0.23.0").parent))
+    monkeypatch.setenv("PATH", str(fake_stochadex(tmp_path / "p/stochadex", "v0.24.0").parent))
     r = deps.resolve("v0.24.1")
     assert (r.version, r.source) == ("v0.24.1", "managed")
-    assert r.graph == [r.binary, "graph"] and r.has_catalogue
 
 
 def test_bump_reads_sha256sums_and_widens_the_range(monkeypatch, lock_copy):
@@ -105,7 +104,7 @@ def test_bump_reads_sha256sums_and_widens_the_range(monkeypatch, lock_copy):
     out = deps.bump("v0.25.2")
     lk = json.loads(lock_copy.read_text())
     assert out["changed"] and lk["version"] == "v0.25.2"
-    assert lk["supported"] == [">=0.23.0", "<0.26.0"]
+    assert lk["supported"] == [">=0.24.0", "<0.26.0"]
     assert set(lk["sha256"]) == {"stochadex-linux-amd64", "stochadex-darwin-arm64"}
 
 

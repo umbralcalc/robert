@@ -78,10 +78,9 @@ supports, in [robert/stochadex.json](robert/stochadex.json):
 | Project pin | Each project records the stochadex version it was created with; `doctor` flags drift |
 | Updates | A weekly workflow moves the lock to the newest release, tests it, and opens a PR |
 
-stochadex v0.24 adds `stochadex graph` and `stochadex catalogue`, which replace the
-separate `stochadex-graph` binary and give robert a machine-readable contract. Until
-the lock reaches v0.24, `robert setup` builds `stochadex-graph` with Go when Go is
-available.
+robert needs stochadex v0.24 or later: it renders the partition graph with
+`stochadex graph`, and checks its skills against `stochadex catalogue`, the JSON list
+of everything a build can run.
 
 ## Connect an agent
 

@@ -35,9 +35,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
       - run: pip install -e '.[dev]'
       - id: bump
         name: Move the lock
@@ -45,6 +42,9 @@ jobs:
           set -euo pipefail
           out=$(python -m robert.deps bump ${{ inputs.version }})
           echo "$out"
+          # The image's default build arg follows the lock (CI and releases pass it anyway).
+          v=$(python -c 'import json;print(json.load(open("robert/stochadex.json"))["version"].lstrip("v"))')
+          sed -i -E "s/^ARG STOCHADEX_VERSION=.*/ARG STOCHADEX_VERSION=${v}/" Dockerfile
           echo "changed=$(echo "$out" | python -c 'import json,sys;print(str(json.load(sys.stdin)["changed"]).lower())')" >> "$GITHUB_OUTPUT"
           echo "version=$(echo "$out" | python -c 'import json,sys;print(json.load(sys.stdin)["version"])')" >> "$GITHUB_OUTPUT"
       - id: test
@@ -69,7 +69,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add robert/stochadex.json
+          git add robert/stochadex.json Dockerfile
           git commit -m "Lock stochadex ${VERSION}"
           git push -u origin "$branch"
           {
@@ -78,8 +78,7 @@ jobs:
             echo "- Checksums come from the release's SHA256SUMS."
             echo "- The full test suite ran against it: **${TESTS}**."
             echo
-            echo "Before merging: add a CHANGELOG entry, and update the Dockerfile's"
-            echo "STOCHADEX_VERSION default (and drop its graph stage once this is >= v0.24)."
+            echo "Before merging: add a CHANGELOG entry."
             if [ "$TESTS" != "success" ]; then
               echo; echo '<details><summary>Test output</summary>'; echo; echo '```'
               tail -60 pytest.log; echo '```'; echo '</details>'

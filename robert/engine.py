@@ -2,7 +2,7 @@
 
 robert never reimplements what stochadex does: validation is `--check`, what a run
 reads and writes is `inspect --io`, what it was made from is `--provenance`, and the
-partition graph is `stochadex graph` (the separate `stochadex-graph` before v0.24).
+partition graph is `stochadex graph`, and what a build can run is `stochadex catalogue`.
 Which binary runs is decided by `deps.resolve`: the project's pinned version first,
 always within robert's supported range. Every call runs with the project root as its
 working directory, so relative paths in a config mean the same thing everywhere.
@@ -78,13 +78,11 @@ class Engine:
 
     # --- plumbing ---------------------------------------------------------
 
-    def _call(self, args: list[str], argv: list[str] | None = None) -> Result:
-        if argv is None:
-            if not self.bin:
-                raise MethodError(self.resolved.problem or "stochadex is not installed")
-            argv = [self.bin]
+    def _call(self, args: list[str]) -> Result:
+        if not self.bin:
+            raise MethodError(self.resolved.problem or "stochadex is not installed")
         proc = subprocess.run(
-            [*argv, *args], cwd=self.root, capture_output=True, text=True
+            [self.bin, *args], cwd=self.root, capture_output=True, text=True
         )
         return Result(
             ok=proc.returncode == 0,
@@ -107,10 +105,7 @@ class Engine:
         return self.resolved.version
 
     def catalogue(self) -> dict[str, Any]:
-        """What this build registers, as stochadex reports it (from v0.24)."""
-        if not self.resolved.has_catalogue:
-            raise MethodError(f"stochadex {self.version()} has no `catalogue` command; "
-                              "it arrives in v0.24")
+        """What this build registers, as stochadex reports it."""
         r = self._call(["catalogue"])
         if not r.ok:
             raise MethodError(f"stochadex catalogue failed: {r.summary()['error']}")
@@ -161,9 +156,4 @@ class Engine:
         return outs
 
     def graph(self, config: str, fmt: str = "dot") -> Result:
-        if self.resolved.graph is None:
-            raise MethodError(
-                f"stochadex {self.version()} cannot render the partition graph: before "
-                "v0.24 it needs the separate stochadex-graph binary (`robert setup` "
-                "installs it when Go is available)")
-        return self._call(["--config", config, "--format", fmt], argv=self.resolved.graph)
+        return self._call(["graph", "--config", config, "--format", fmt])

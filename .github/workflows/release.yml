@@ -34,9 +34,6 @@ jobs:
           [ "$code" = "$version" ] || { echo "::error::tag ${GITHUB_REF_NAME} but code ${code}"; exit 1; }
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "stochadex=$(python -c 'import json;print(json.load(open("robert/stochadex.json"))["version"].lstrip("v"))')" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
       - name: Test against the locked stochadex
         run: |
           pip install -e '.[dev]'
