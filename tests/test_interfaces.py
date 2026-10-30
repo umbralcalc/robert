@@ -1,5 +1,7 @@
 """The CLI, the MCP server and the adapters all come from one registry and one source."""
 
+import re
+
 import anyio
 import pytest
 from mcp import Client
@@ -49,6 +51,52 @@ def test_committed_adapters_match_their_source(rel, text):
     path = REPO / rel
     assert path.exists() and path.read_text() == text, (
         f"{rel} is stale: run `robert adapters`")
+
+
+SKILL_CATALOGUE_KEYS = {
+    "Iterations": "iterations", "Kernels": "kernels", "Likelihoods": "likelihoods",
+    "Priors": "priors", "Macros": "macros",
+}
+SKILL_COMPONENT_KEYS = {
+    "condition": "output_conditions", "function": "output_functions",
+    "termination": "termination_conditions", "timestep": "timestep_functions",
+}
+
+
+def _skill_catalogue() -> dict[str, set[str]]:
+    """Every `{type: ...}` name the stochadex-model skill tells an agent it may use."""
+    text = (REPO / "skills/stochadex-model/SKILL.md").read_text()
+    section = text[text.index("## Catalogue"):]
+    named: dict[str, set[str]] = {}
+    for para in re.split(r"\n(?=\*\*)", section):
+        heading = re.match(r"\*\*([^*:]+):\*\*", para)
+        if not heading:
+            continue
+        flat = para
+        while (stripped := re.sub(r"\([^()]*\)", "", flat)) != flat:
+            flat = stripped  # parenthesised text holds params and fields, not types
+        key = next((v for k, v in SKILL_CATALOGUE_KEYS.items()
+                    if heading.group(1).startswith(k)), None)
+        if key:
+            named.setdefault(key, set()).update(re.findall(r"`([a-z_]+)`", flat))
+        for word, ckey in SKILL_COMPONENT_KEYS.items():
+            for group in re.findall(rf"{word} `([a-z_|]+)`", para):
+                named.setdefault(ckey, set()).update(group.split("|"))
+    return named
+
+
+@needs_stochadex
+def test_skill_names_only_types_stochadex_registers():
+    """The contract with stochadex: the skill is checked against `stochadex catalogue`,
+    so a renamed or removed type fails here instead of confusing an agent."""
+    from robert.engine import Engine
+    catalogue = Engine(REPO).catalogue()
+    registered = {k: {e["name"] for e in v} for k, v in catalogue.items()
+                  if isinstance(v, list) and v and isinstance(v[0], dict)}
+    named = _skill_catalogue()
+    assert set(named) >= set(SKILL_CATALOGUE_KEYS.values())
+    unknown = {k: sorted(names - registered.get(k, set())) for k, names in named.items()}
+    assert not any(unknown.values()), f"skill names types stochadex does not register: {unknown}"
 
 
 @needs_stochadex

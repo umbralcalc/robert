@@ -13,6 +13,16 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Changed
+
+- **robert locks stochadex v0.24.0 and needs v0.24 or later.** The partition graph comes
+  from `stochadex graph` and the skills are checked against `stochadex catalogue`, so the
+  separate `stochadex-graph` binary, and the Go toolchain `robert setup`, the image and CI
+  used to build it, are no longer needed.
+- The `stochadex-model` skill tells agents to install stochadex only through
+  `robert setup`, never from `latest`, and documents `stochadex graph` and
+  `stochadex catalogue`.
+
 ### Added
 
 - The method CLI and MCP server: one tool per step of the discovery-and-warrant loop

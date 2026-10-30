@@ -13,7 +13,7 @@ EXAMPLE = REPO / "examples/logistic-growth"
 
 def _have_stochadex() -> bool:
     e = Engine(REPO)
-    return bool(e.bin and e.resolved.graph)
+    return bool(e.bin)
 
 
 needs_stochadex = pytest.mark.skipif(

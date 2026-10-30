@@ -145,34 +145,29 @@ runs it in-process. Everything you need to author a working config is here.
 
 #### Prerequisite: the `stochadex` CLI
 
-Authoring needs the `stochadex` binary on PATH to run configs. It is a single prebuilt
-executable — no Go toolchain required to run a data-spec config (the kind this skill writes).
+robert installs and pins the stochadex binary: `robert setup` downloads the release robert
+locks and verifies its checksum, and `robert doctor` reports which binary is in use and
+whether it is in the supported range. Never download stochadex yourself, from `latest` or
+anywhere else: an unpinned binary breaks the project's reproducibility. If `robert doctor`
+reports a problem, stop and tell the user its fix rather than guessing. Authoring is fine
+without the binary, but you cannot *run* a config.
 
-```bash
-# Prebuilt binary (no Go needed) — pick your platform's asset:
-curl -L https://github.com/umbralcalc/stochadex/releases/latest/download/stochadex-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') -o stochadex
-chmod +x stochadex && ./stochadex --config model.yaml
+`robert run` runs the project's current model with provenance. To call stochadex directly,
+use the path `robert doctor` prints.
 
-# Or, with a Go toolchain, build from a checkout (the CLI is its own module):
-git clone https://github.com/umbralcalc/stochadex && cd stochadex/cmd/stochadex && go build -o stochadex .
-```
-
-If `stochadex` is missing, stop and tell the user to install it (above) rather than guessing —
-authoring is fine, but you cannot *run* a config without it.
-
-**Check what you have before writing a config that needs it:**
+**Check what the build can run before writing a config that needs it:**
 
 ```bash
 stochadex --version
-# stochadex v0.5.3 darwin/arm64
+# stochadex v0.24.0 darwin/arm64
 # features: arrow postgres s3          <- portable build
 # features: arrow cblas duckdb postgres s3   <- accelerated build
+stochadex catalogue    # JSON: every registered iteration, source, sink, macro, kernel, ...
 ```
 
-**Two builds exist.** The default asset above is pure Go. An `stochadex-accel-<os>-<arch>` asset
-(same URL with `stochadex-accel-`) adds `cblas` (an optimised system BLAS — worth it for
-BLAS-heavy workloads, see the performance page) and `duckdb` output. Both accept identical
-configs; only the compiled-in features differ, and `--version` is how you tell them apart.
+**Two builds exist.** The portable one is pure Go. The accelerated one (`robert setup
+--accelerated`) adds `cblas` (an optimised system BLAS, worth it for BLAS-heavy workloads)
+and `duckdb` output. Both accept identical configs; only the compiled-in features differ.
 
 #### The 60-second mental model
 
@@ -527,7 +522,9 @@ stochadex --config model.yaml
 
 Before spending a run, `stochadex --config model.yaml --check` validates the config, including
 its wiring and the deadlock pre-flight, without running it. `stochadex inspect --io -c
-model.yaml` prints, as JSON, what the run would read and write.
+model.yaml` prints, as JSON, what the run would read and write. `stochadex graph -c
+model.yaml` prints the partition dependency graph (Mermaid, or `--format dot`) and fails
+on a within-step deadlock cycle.
 
 `--skip-if-unchanged` skips a run whose file outputs already carry its provenance key (same
 config, inputs, model files and binary); `stochadex inspect --provenance -c model.yaml`
