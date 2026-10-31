@@ -20,6 +20,29 @@ from .project import MethodError
 from .tools import TOOLS
 
 
+class _JsonList(list):
+    """One flag value that was a JSON list of strings."""
+
+
+def _list_item(value: str) -> str | _JsonList:
+    """A string-list flag takes one item per flag, or a whole JSON list once."""
+    if value.lstrip().startswith("["):
+        try:
+            items = json.loads(value)
+        except json.JSONDecodeError:
+            return value
+        if isinstance(items, list) and all(isinstance(i, str) for i in items):
+            return _JsonList(items)
+    return value
+
+
+def _flatten(values: list) -> list[str]:
+    out: list[str] = []
+    for v in values:
+        out.extend(v) if isinstance(v, _JsonList) else out.append(v)
+    return out
+
+
 def _add_arg(p: argparse.ArgumentParser, name: str, schema: dict[str, Any],
              required: bool) -> None:
     flag = "--" + name.replace("_", "-")
@@ -29,7 +52,7 @@ def _add_arg(p: argparse.ArgumentParser, name: str, schema: dict[str, Any],
         p.add_argument(flag, action=argparse.BooleanOptionalAction, default=None, **kw)
         return
     if t == "array" and schema.get("items", {}).get("type") == "string":
-        kw.update(action="append")
+        kw.update(action="append", type=_list_item)
     elif t in ("array", "object"):
         kw.update(type=json.loads, metavar="JSON")
     elif t == "number":
@@ -37,6 +60,30 @@ def _add_arg(p: argparse.ArgumentParser, name: str, schema: dict[str, Any],
     if "enum" in schema:
         kw["choices"] = schema["enum"]
     p.add_argument(flag, required=required, **kw)
+
+
+# Worked examples for the commands whose arguments are JSON, shown in --help.
+EXAMPLES = {
+    "conjecture": """example:
+  robert conjecture --rationale "simplest mechanism: unconstrained growth" \\
+    --partitions '{"population": {"role": "structural", "observed": true,
+                   "hypothesis": "grows at a constant per-capita rate"},
+                   "season": {"role": "nuisance", "hypothesis": "a weak yearly cycle"}}'""",
+    "confront": """example:
+  robert confront --config model/confront.yaml --posterior-partitions ols \\
+    --indices '{"ols": [6, 7]}'""",
+    "answer": """example:
+  robert answer --experiment E002 \\
+    --answer "Yes: the model reproduces 2.0 home and 1.0 away goals per match" \\
+    --assumptions '[{"assumption": "goals arrive as a Poisson process",
+                     "owner": "robert", "sensitivity": "untested"}]' \\
+    --evidence '[{"kind": "test", "ref": "backtest-goals"}]' \\
+    --follow-ups '[{"question": "Does a red card change the scoring rate?",
+                    "kind": "test-assumption"}]'""",
+    "revise": """example:
+  robert revise --monitors '[{"name": "drift", "partition": "population",
+                              "script": "analysis/drift.py", "action": "recalibrate"}]'""",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,7 +94,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     for tool in TOOLS:
         p = sub.add_parser(tool.name, help=tool.description.split(". ")[0],
-                           description=tool.description)
+                           description=tool.description, epilog=EXAMPLES.get(tool.name),
+                           formatter_class=argparse.RawDescriptionHelpFormatter)
         schema = tool.input_schema
         for name, prop in schema["properties"].items():
             _add_arg(p, name, prop, name in tool.required)
@@ -142,7 +190,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
         else:
             tool = next(t for t in TOOLS if t.name == ns.command)
-            args = {k: v for k, v in vars(ns).items()
+            args = {k: (_flatten(v) if isinstance(v, list) else v)
+                    for k, v in vars(ns).items()
                     if k not in ("command", "json") and v is not None}
             result = tool.call(args)
     except MethodError as e:

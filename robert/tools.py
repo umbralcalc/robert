@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from . import loop, support
+from . import experiments, loop, support
 from .contracts import ACTORS, DECISIONS, MODES, ROLES, TEST_KINDS
 from .project import Project
 
@@ -141,6 +141,40 @@ TOOLS: list[Tool] = [
               "partition": STR, "value": NUM, "rationale": STR}}},
           "new_questions": STRS},
          ["monitors"], loop.revise),
+    Tool("ask",
+         "Open an experiment for a question, and get back what robert already knows that "
+         "bears on it. Call it for every question the user asks, and for a suggested "
+         "follow-up the user takes up (from_follow_up: E002.1).",
+         {"question": STR, "asked_by": {"type": "string", "enum": experiments.ASKERS},
+          "parent": {**STR, "description": "the experiment this question follows from"},
+          "from_follow_up": {**STR, "description": "a suggested follow-up, e.g. E002.1"}},
+         [], experiments.ask),
+    Tool("answer",
+         "Record the answer to an experiment: the answer in the user's terms, every "
+         "assumption it rests on (robert's build choices included, each owned and with "
+         "its sensitivity), the evidence behind every number, and follow-up questions.",
+         {"experiment": STR, "answer": STR,
+          "assumptions": {"type": "array", "items": {"type": "object", "properties": {
+              "assumption": STR, "owner": {"type": "string", "enum": experiments.OWNERS},
+              "sensitivity": {"type": "string", "enum": experiments.SENSITIVITY},
+              "why": STR}}},
+          "evidence": {"type": "array", "items": {"type": "object", "properties": {
+              "kind": {"type": "string", "enum": experiments.EVIDENCE_KINDS},
+              "ref": {**STR, "description": "out/ path, ledger hash, test id, query id "
+                      "or file path"},
+              "shows": STR}}},
+          "follow_ups": {"type": "array", "items": {"type": "object", "properties": {
+              "question": STR,
+              "kind": {"type": "string", "enum": experiments.FOLLOW_UP_KINDS},
+              "why": STR}}},
+          "supersedes": {**STR, "description": "an earlier experiment this answer replaces"}},
+         ["experiment", "answer", "assumptions", "evidence", "follow_ups"],
+         experiments.answer),
+    Tool("context",
+         "What robert knows so far, compressed: answered questions with their live "
+         "assumptions, open questions, and follow-ups not yet taken up. With focus, the "
+         "chain that experiment follows from in full.",
+         {"focus": STR}, [], experiments.context),
     Tool("run", "Run the current variant (or a config) with provenance; skips unchanged runs.",
          {"config": STR, "sets": SETS, "force": BOOL}, [], support.run),
     Tool("graph",

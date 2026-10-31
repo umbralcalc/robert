@@ -143,7 +143,7 @@ def init(path: str, name: str, description: str, level: str,
         p = project.path(rel)
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text)
-    for d in ("model", "analysis", "learned", "out", "figures", "ledger"):
+    for d in ("model", "analysis", "learned", "out", "figures", "ledger", "experiments"):
         project.path(d).mkdir(exist_ok=True)
         (project.path(d) / ".gitkeep").touch()
     if git and shutil.which("git") and not (root / ".git").exists():

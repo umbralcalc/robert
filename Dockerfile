@@ -34,7 +34,7 @@ COPY . /src
 # The cloud extra adds the Managed Agents worker, so the same image is the
 # per-session sandbox for `robert cloud host` (entrypoint `robert cloud worker`).
 RUN pip install --no-cache-dir "/src[cloud]" \
- && mkdir -p /opt/robert && cp -r /src/skills /opt/robert/skills && rm -rf /src
+ && mkdir -p /opt/robert && cp -r /src/skills /src/examples /opt/robert/ && rm -rf /src
 
 ARG VERSION=dev
 ARG REVISION=unknown

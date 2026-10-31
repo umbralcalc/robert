@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 from ..project import MethodError
-from . import Config, project, save_project
+from . import Config, project, projects, save_project
 from .runners import Event, get
 
 CONSOLE = "https://platform.claude.com/workspaces/default/sessions/{}"
@@ -29,15 +29,26 @@ def kickoff(name: str, description: str) -> str:
 def new(name: str, description: str, runner: str) -> None:
     cfg = Config.load()
     driver = get(runner)
+    started = projects().get(name)
+    if started and (started.get("turns") or started.get("session_id")):
+        raise MethodError(f"`{name}` is already a cloud project; reopen it with "
+                          f"`robert cloud chat {name}`")
     repo = f"{cfg.github_owner}/{name}"
-    made = subprocess.run(["gh", "repo", "create", repo, "--private", "--add-readme",
-                           "--description", f"robert project: {description}"[:350]],
-                          capture_output=True, text=True)
-    if made.returncode != 0:
-        raise MethodError(f"could not create {repo}: {made.stderr.strip()}")
+    exists = subprocess.run(["gh", "repo", "view", repo, "--json", "name"],
+                            capture_output=True, text=True).returncode == 0
+    if exists:
+        # A repo left by an attempt that stopped before its first turn: use it.
+        print(f"Using the existing {repo}")
+    else:
+        made = subprocess.run(["gh", "repo", "create", repo, "--private", "--add-readme",
+                               "--description", f"robert project: {description}"[:350]],
+                              capture_output=True, text=True)
+        if made.returncode != 0:
+            raise MethodError(f"could not create {repo}: {made.stderr.strip()}")
+        print(f"Created {repo}")
     entry = {"runner": runner, "repo": repo, **driver.start(cfg, name, repo)}
     save_project(name, entry)
-    print(f"Created {repo}; runner {runner}")
+    print(f"Runner: {runner}")
     if entry.get("session_id"):
         print(CONSOLE.format(entry["session_id"]))
     converse(cfg, name, entry, first=kickoff(name, description))
