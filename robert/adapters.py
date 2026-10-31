@@ -12,6 +12,8 @@ import json
 import re
 from pathlib import Path
 
+import yaml
+
 from . import __version__
 from .scaffold import MCP_SERVER
 from .tools import TOOLS
@@ -28,10 +30,8 @@ def skills(repo: Path = REPO) -> list[tuple[dict[str, str], str]]:
     out = []
     for path in sorted((repo / "skills").glob("*/SKILL.md")):
         _, front, body = path.read_text().split("---", 2)
-        # Skill frontmatter is `key: value` lines, not strict YAML (descriptions
-        # may contain `{type: ...}`), so split each line at its first colon.
-        meta = dict(line.split(":", 1) for line in front.strip().splitlines())
-        out.append(({k.strip(): v.strip() for k, v in meta.items()}, body.strip() + "\n"))
+        # Strict YAML: the Skills API that `ant apply` uploads to parses it so too.
+        out.append((yaml.safe_load(front), body.strip() + "\n"))
     return out
 
 
@@ -84,6 +84,14 @@ def outputs(repo: Path = REPO) -> dict[str, str]:
             + HEADER + body)
         agents += [f"\n## Skill: {front['name']}\n\n", _nest_headings(body)]
     files["adapters/agents/AGENTS.md"] = "".join(agents)
+
+    # The Managed Agents agent: its frontmatter stays as written in the file, and
+    # its system prompt is the instructions every cloud runner gets.
+    agent = repo / "cloud/agents/robert/agent.md"
+    if agent.exists():
+        _, front, _ = agent.read_text().split("---", 2)
+        instructions = (REPO / "robert/cloud/instructions.md").read_text()
+        files["cloud/agents/robert/agent.md"] = f"---{front}---\n\n{instructions}"
     return files
 
 

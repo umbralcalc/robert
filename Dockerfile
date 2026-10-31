@@ -31,7 +31,10 @@ RUN apt-get update \
 COPY --from=stochadex /usr/local/bin/stochadex /usr/local/bin/stochadex
 
 COPY . /src
-RUN pip install --no-cache-dir /src && rm -rf /src
+# The cloud extra adds the Managed Agents worker, so the same image is the
+# per-session sandbox for `robert cloud host` (entrypoint `robert cloud worker`).
+RUN pip install --no-cache-dir "/src[cloud]" \
+ && mkdir -p /opt/robert && cp -r /src/skills /opt/robert/skills && rm -rf /src
 
 ARG VERSION=dev
 ARG REVISION=unknown
@@ -44,7 +47,8 @@ LABEL org.opencontainers.image.title="robert" \
 
 # Same non-root uid as the stochadex image, so bind mounts behave the same way.
 RUN useradd --uid 65532 --user-group --create-home robert \
- && mkdir -p /work && chown robert:robert /work
+ && mkdir -p /work /workspace /mnt/memory \
+ && chown robert:robert /work /workspace /mnt/memory
 USER robert
 WORKDIR /work
 

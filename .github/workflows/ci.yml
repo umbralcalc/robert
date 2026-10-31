@@ -54,6 +54,12 @@ jobs:
           load: true
           tags: robert:ci
           build-args: STOCHADEX_VERSION=${{ steps.lock.outputs.stochadex }}
+      - name: The claude-code runner image builds on it
+        run: |
+          # The default (docker-driver) builder can see the robert:ci image just loaded.
+          docker buildx build --builder default --load -t robert-claude-code:ci \
+            --build-arg BASE=robert:ci -f cloud/runners/claude-code/Dockerfile .
+          docker run --rm --entrypoint claude robert-claude-code:ci --version
       - name: The image runs the whole loop
         run: |
           mkdir -p demo && chmod 777 demo
