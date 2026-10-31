@@ -13,6 +13,11 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Fixed
+
+- `robert cloud` reports a Docker problem in plain words ("Docker isn't running...")
+  instead of a traceback, and passes on docker's own message for any other failure.
+
 ### Changed
 
 - **Cloud projects are local git repos by default.** `robert cloud new` creates the
