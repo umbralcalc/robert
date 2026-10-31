@@ -1,6 +1,6 @@
 {
   "id": "robert",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "robert (AI simulation scientist)",
   "description": "Installs robert and the stochadex release it locks, so any dev container, Codespace or cloud coding agent can drive stochadex projects through robert's MCP server.",
   "documentationURL": "https://github.com/umbralcalc/robert",

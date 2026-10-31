@@ -10,4 +10,4 @@ and the skills version every project records all read it. The stochadex version
 robert supports lives in `stochadex.json`.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
