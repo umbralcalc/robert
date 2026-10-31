@@ -46,11 +46,16 @@ every edit to a stochadex config. If your agent can't load skills, read them at
 - The sandbox reaches only your model provider's API and the hosts listed in the
   project's `data/licences.yaml` (an entry's `hosts:`, or its `source` URL's host).
 - To use a new data source, tell the user what it is, its licence and its host, and
-  ask for approval. If they approve, add it to `data/licences.yaml`, log the decision
-  with `robert intervene`, and commit. The host opens the network to it from the
-  next sandbox, which starts on the user's next message.
-- A refused connection means the host isn't on the list. Never try to work around
-  it.
+  ask for approval. If they approve, add it to `data/licences.yaml` (list the exact
+  hosts the data is fetched from under `hosts:`), log the decision with
+  `robert intervene`, and commit.
+- The host is the `robert cloud` process on the user's own machine. It reads
+  `data/licences.yaml` from the project's working copy at the start of every turn and
+  opens the network to those hosts, so an approval takes effect from the user's next
+  message; nothing needs to be pushed.
+- A refused connection to a host that isn't listed is the allowlist working. A
+  refused connection to a listed host, on a later turn, is a fault in robert's
+  network setup: report the exact host and error, and never try to work around it.
 
 ## Talking to the user
 

@@ -76,8 +76,9 @@ def ensure_egress(projects: list[Path], extra_hosts: list[str] | None = None) ->
                 PROXY_IMAGE)
         _docker("network", "connect", NETWORK, PROXY)
     else:
-        _docker("exec", PROXY, "squid", "-k", "reconfigure", "-f", "/etc/squid/robert.conf",
-                check=False)
+        # squid reloads its config and allowlist on SIGHUP. (`squid -k reconfigure`
+        # can't find the process: the config runs squid without a PID file.)
+        _docker("kill", "--signal", "HUP", PROXY)
     return hosts
 
 

@@ -15,6 +15,13 @@ created with, so a comparison between runs is always like for like.
 
 ### Fixed
 
+- **An approved data source now actually opens the sandbox's network.** The egress
+  proxy never reloaded its allowlist: `squid -k reconfigure` can't find squid without a
+  PID file, and the failure was ignored, so the proxy kept the hosts it started with.
+  robert now reloads it with SIGHUP. Each turn of a CLI runner also prints which hosts
+  the sandbox can reach, and the agent instructions explain that the host is the
+  user's own `robert cloud` process, re-reading `data/licences.yaml` every turn.
+
 - `robert cloud` reports a Docker problem in plain words ("Docker isn't running...")
   instead of a traceback, and passes on docker's own message for any other failure.
 
