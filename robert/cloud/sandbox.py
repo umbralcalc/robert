@@ -96,28 +96,38 @@ def container_args(image: str, name: str, project: str, project_dir: Path,
     return [*args, "--entrypoint", command[0], image, *command[1:]]
 
 
+# Host git talks to GitHub over HTTPS with the GitHub CLI's credentials, whatever
+# protocol `gh` or the user's git is set to, and never stops to prompt (an SSH key
+# passphrase or a password prompt would hang a turn with no one to answer it).
+GIT_AUTH = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential"]
+GIT_ENV = {"GIT_TERMINAL_PROMPT": "0"}
+
+
+def _git(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
+    import os
+    return subprocess.run(["git", *GIT_AUTH, *(["-C", str(cwd)] if cwd else []), *args],
+                          capture_output=True, text=True, env={**os.environ, **GIT_ENV})
+
+
 def ensure_repo(cfg: Config, project: str, repo: str) -> Path:
     """Clone the project repo into the host workspace, or bring it up to date."""
     path = cfg.projects / project
     if not (path / ".git").exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run(["gh", "repo", "clone", repo, str(path)],
-                           capture_output=True, text=True)
+        r = _git("clone", "-q", f"https://github.com/{repo}.git", str(path))
         if r.returncode != 0:
             raise MethodError(f"could not clone {repo}: {r.stderr.strip()}")
     else:
-        subprocess.run(["git", "-C", str(path), "pull", "--ff-only", "-q"], check=False,
-                       capture_output=True)
+        _git("pull", "--ff-only", "-q", cwd=path)
     return path
 
 
 def push(path: Path) -> str:
     """Push what the agent committed, with the host's git credentials."""
-    ahead = subprocess.run(["git", "-C", str(path), "rev-list", "--count", "@{u}..HEAD"],
-                           capture_output=True, text=True)
+    ahead = _git("rev-list", "--count", "@{u}..HEAD", cwd=path)
     if ahead.returncode != 0 or ahead.stdout.strip() in ("", "0"):
         return "nothing to push"
-    r = subprocess.run(["git", "-C", str(path), "push", "-q"], capture_output=True, text=True)
+    r = _git("push", "-q", cwd=path)
     return "pushed" if r.returncode == 0 else f"push failed: {r.stderr.strip()[-300:]}"
 
 

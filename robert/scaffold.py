@@ -19,6 +19,9 @@ stochadex engine. Read this before changing anything.
 
 ## How to work here
 
+- The user asks questions; you answer them. Open an experiment with `ask` for each
+  question, answer it with `answer` (assumptions stated, evidence cited, follow-ups
+  suggested), and load `context` before a deeper question.
 - Drive the project through the robert tools (MCP server `robert`, or the `robert`
   CLI with identical arguments). Each loop step is one tool:
   init → pose → conjecture → confront → test → (discover | compress) → warrant →
@@ -40,6 +43,7 @@ stochadex engine. Read this before changing anything.
 
 | File | Contract |
 | --- | --- |
+| experiments/ | Every question asked, robert's answer, its assumptions, evidence and follow-ups |
 | claim.yaml | The claim, its intended use and the conditions it must hold under |
 | domain.yaml | Partition names in the user's terms; what the user already knows |
 | model/sim.yaml | A valid stochadex config and nothing else |

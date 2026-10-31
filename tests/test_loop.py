@@ -40,6 +40,11 @@ def test_walkthrough_runs_the_whole_loop(tmp_path, cli_env):
     assert (target / "figures/model-population.svg").read_text().startswith("<svg")
     assert "-.->" not in (target / "figures/graph-tests.mmd").read_text()
 
+    e1, e2 = p.read_yaml("experiments/E001.yaml"), p.read_yaml("experiments/E002.yaml")
+    assert e1["status"] == "answered" and e1["model_variant"] == "v2"
+    assert {a["owner"] for a in e1["assumptions"]} == {"user", "robert"}
+    assert e2["parent"] == "E001" and e2["from_follow_up"] == "E001.1"
+
 
 @needs_stochadex
 def test_first_conjecture_fails_its_tests(tmp_path, cli_env):

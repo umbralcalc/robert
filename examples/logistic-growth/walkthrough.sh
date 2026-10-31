@@ -13,6 +13,9 @@ robert init --path "$TARGET" --name "Logistic growth" --no-git \
 cp -R "$HERE"/data "$HERE"/model "$HERE"/analysis "$HERE"/tests.yaml "$TARGET"/
 cd "$TARGET"
 
+# The user's question opens an experiment; the loop below earns its answer.
+robert ask --question "How large will the population be over the next 15 years?"
+
 robert pose \
   --question "How large will the population be over the next 15 years?" \
   --claim "The population forecast for years 25-39 is within 15% of what is observed" \
@@ -58,6 +61,20 @@ robert revise --monitors '[{"name": "census-drift", "partition": "population",
   "script": "analysis/drift_monitor.py", "action": "recalibrate"}]' \
   --value-of-information '[{"partition": "population", "value": 1.0,
   "rationale": "capacity is the least identified parameter"}]'
+
+# The answer, with its assumptions (robert's own build choices included) and the
+# evidence behind its numbers, and follow-ups the user can take up.
+robert answer --experiment E001 \
+  --answer "Logistic growth to a capacity near 100 thousand; years 25-39 are forecast within 15%" \
+  --assumptions '[{"assumption": "habitat unchanged over the horizon", "owner": "user", "sensitivity": "untested"},
+    {"assumption": "per-capita growth falls linearly with population", "owner": "robert", "sensitivity": "untested", "why": "simplest density dependence that fits"},
+    {"assumption": "the seasonal cycle can be ignored", "owner": "robert", "sensitivity": "insensitive", "why": "compress showed it does not move the forecast"}]' \
+  --evidence '[{"kind": "test", "ref": "backtest-population"}, {"kind": "query", "ref": "fc-1"},
+    {"kind": "output", "ref": "out/queries/fc-1/factual/model.log"}]' \
+  --follow-ups '[{"question": "How sensitive is the forecast to the capacity estimate?", "kind": "test-assumption"},
+    {"question": "What would harvesting 5 per year do to the population?", "kind": "deepen"}]'
+robert ask --from-follow-up E001.1
+robert context
 
 robert graph --overlay tests
 robert graph --overlay lineage

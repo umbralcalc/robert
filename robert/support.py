@@ -106,10 +106,19 @@ def status(project: Project) -> dict[str, Any]:
         "variants": len(lin.get("variants", [])),
         "partitions": by_status,
         "warrants": len(project.ledger_entries("warrants")),
+        "experiments": _experiment_counts(project),
         "interventions": len(ints),
         "versions": {k: meta.get(k) for k in ("robert_version", "skills_version",
                                               "stochadex_version")},
     }
+
+
+def _experiment_counts(project: Project) -> dict[str, int]:
+    from .experiments import all_experiments
+    counts: dict[str, int] = {}
+    for e in all_experiments(project):
+        counts[e["status"]] = counts.get(e["status"], 0) + 1
+    return counts
 
 
 def explain(project: Project, artefact: str) -> dict[str, Any]:

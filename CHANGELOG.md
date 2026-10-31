@@ -15,6 +15,15 @@ created with, so a comparison between runs is always like for like.
 
 ### Added
 
+- **Experiments: the unit the user works with.** The user asks a question and robert
+  answers it. `ask` opens experiment `E###` and returns what earlier experiments
+  established; `answer` records the answer with every assumption it rests on (owned by
+  the user or robert, with its sensitivity), the evidence behind every number, and
+  follow-up questions; `context` loads the chain of experiments a deeper question
+  builds on. The answer gate refuses missing assumptions, numbers without evidence,
+  evidence that doesn't exist, and answers with no follow-ups. Experiments live in
+  `experiments/` in every project.
+
 - **robert in the cloud** (`robert-ai[cloud]`, see `cloud/README.md`): one locked-down
   sandbox, any agent. Every run gets a fresh container from the robert image (non-root,
   read-only, no capabilities) on an internal network whose only way out is a proxy
@@ -29,8 +38,21 @@ created with, so a comparison between runs is always like for like.
   its agent from a terminal.
 - The robert image installs the cloud extra and the skills, so it is the sandbox base.
 
+### Changed
+
+- **robert owns the build.** The `simulation-scientist` skill and the cloud
+  instructions now lead every reply with the answer, its assumptions and numbered
+  follow-ups. robert makes build choices itself and records them as its own
+  assumptions, asking the user only what they believe about the world, and only when
+  an answer depends on it.
+- String-list arguments also take one JSON list, and the commands with JSON arguments
+  show a worked example in `--help`. The robert image includes `examples/`.
+
 ### Fixed
 
+- `robert cloud` clones and pushes project repos over HTTPS with the GitHub CLI's
+  credentials and never prompts, whatever protocol `gh` is set to.
+- `robert cloud new` reuses a project that never completed a turn.
 - The `stochadex-model` skill's frontmatter is now strict YAML, as the Skills API
   requires; `robert adapters` parses it strictly so this cannot regress.
 
