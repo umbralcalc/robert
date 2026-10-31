@@ -13,6 +13,29 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Added
+
+- **Standing questions** (`standing.yaml`, the `standing` tool): questions posed once
+  that every answer must report on. They are the channel for what nobody thought to ask
+  about. `init` sets four defaults (contradictions, surprises, operationalisation
+  choices, anything that would flip a warranted claim), and the user can add or retire
+  their own.
+- **Answers guard against confirmation bias.** `answer` now requires the strongest
+  evidence or argument against the answer (`against`), and records every analysis tried,
+  kept or not (`tried`), and the competing explanations weighed (`hypotheses`).
+- **Follow-ups that tell explanations apart.** Each follow-up has a value (high,
+  medium, low) and they are ranked by it; at least one must name in `discriminates` the
+  explanations its result would separate.
+
+### Changed
+
+- **Three kinds of choice.** Every assumption is an `implementation`,
+  `operationalisation` or `belief` choice. robert decides implementation choices
+  silently, makes operationalisation choices provisionally and states them where the
+  user can contest them, and asks about beliefs only when an answer depends on one. This
+  replaces 0.2.0's "never ask about the build", which hid choices that change what a
+  result means. The `answer` arguments change accordingly; `against` is now required.
+
 ## [0.2.0] — 2026-10-31
 
 This release makes robert question-led and runnable in the cloud with any agent. The

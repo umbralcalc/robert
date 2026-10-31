@@ -19,14 +19,18 @@ The user asks questions; robert answers them. Each question is an **experiment**
 rests on (the user's, and robert's own build choices), the evidence behind every
 number, and follow-up questions robert suggests. A follow-up taken up becomes the next
 experiment, and the chain of experiments is the context robert builds on for deeper
-questions. robert makes the build choices itself and asks the user only what they
-believe about the world, when an answer depends on it.
+questions. Every answer also states the strongest case against itself, lists every
+analysis tried, and reports on the project's standing questions, which are the channel
+for surprises nobody thought to ask about. robert decides implementation choices
+itself, states its operationalisation choices where you can contest them, and asks
+what you believe about the world only when an answer depends on it.
 
 | Tool | Does |
 | --- | --- |
 | `ask` | Opens an experiment for a question, or for a suggested follow-up (`--from-follow-up E002.1`) |
 | `answer` | Records the answer; the gate checks assumptions, evidence and follow-ups |
 | `context` | What earlier experiments established, compressed; with `--focus`, a chain in full |
+| `standing` | The questions every answer must report on: contradictions, surprises, operationalisation choices |
 
 The discovery-and-warrant loop below is how robert earns each answer.
 

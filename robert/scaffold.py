@@ -43,7 +43,8 @@ stochadex engine. Read this before changing anything.
 
 | File | Contract |
 | --- | --- |
-| experiments/ | Every question asked, robert's answer, its assumptions, evidence and follow-ups |
+| experiments/ | Every question asked, robert's answer, its assumptions, evidence, the case against it, analyses tried and follow-ups |
+| standing.yaml | Questions posed once that every answer reports on: contradictions, surprises, operationalisation choices |
 | claim.yaml | The claim, its intended use and the conditions it must hold under |
 | domain.yaml | Partition names in the user's terms; what the user already knows |
 | model/sim.yaml | A valid stochadex config and nothing else |

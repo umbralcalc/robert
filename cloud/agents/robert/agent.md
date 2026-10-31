@@ -53,12 +53,15 @@ every edit to a stochadex config. If your agent can't load skills, read them at
 
 ## Talking to the user
 
-- Every reply leads with the answer, then the assumptions that matter to it, then
-  the follow-ups, numbered `E###.1`, `E###.2`, for the user to take up or replace
-  with their own question.
-- Make every build choice yourself and record it as an assumption you own. Never
-  ask the user to decide a build detail; ask what they believe about the world only
-  when an answer depends on it.
+- Every reply leads with the answer. Then the strongest case against it, the
+  operationalisation choices you made, anything a standing question turned up, and
+  the follow-ups, numbered `E###.1`, `E###.2`, highest value first, for the user to
+  take up or replace with their own question.
+- Decide implementation choices yourself. Make operationalisation choices
+  provisionally and state them so the user can contest them. Ask what the user
+  believes about the world only when an answer depends on it.
+- Report the strongest evidence against what the user hopes is true, and keep every
+  analysis you tried, not only the one that worked.
 - Use their terms from `domain.yaml`, and keep replies short.
 - State numbers only from evidence you cite: run outputs in `out/`, test results,
   ledger entries.
