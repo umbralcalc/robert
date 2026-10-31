@@ -45,7 +45,7 @@ Confirm = Callable[[Event], bool]
 class Runner:
     name = ""
 
-    def start(self, cfg: Config, project: str, repo: str) -> dict[str, Any]:
+    def start(self, cfg: Config, project: str, repo: str | None) -> dict[str, Any]:
         """Set up a new project's conversation; returns state saved in the registry."""
         return {}
 
@@ -64,13 +64,13 @@ class ManagedAgents(Runner):
         from anthropic import Anthropic
         return Anthropic()
 
-    def start(self, cfg: Config, project: str, repo: str) -> dict[str, Any]:
+    def start(self, cfg: Config, project: str, repo: str | None) -> dict[str, Any]:
         if not cfg.agent_id or not cfg.environment_id:
             raise MethodError("the managed-agents runner needs `robert cloud configure "
                               "--lock claude-lock.json` after `ant apply cloud/agents/robert`")
         session = self._client().beta.sessions.create(
             agent=cfg.agent_id, environment_id=cfg.environment_id, title=project,
-            metadata={"robert_project": project, "robert_repo": repo})
+            metadata={"robert_project": project, **({"robert_repo": repo} if repo else {})})
         return {"session_id": session.id}
 
     def turn(self, cfg, project, entry, message, confirm):
@@ -127,7 +127,7 @@ class CliRunner(Runner):
         yield Event("text", line.rstrip("\n"))
 
     def turn(self, cfg, project, entry, message, confirm):
-        path = sandbox.ensure_repo(cfg, project, entry["repo"])
+        path = sandbox.ensure_repo(cfg, project, entry.get("repo"))
         sandbox.ensure_egress(sandbox.active_projects(cfg), self.hosts(cfg))
         missing = [n for n in self.secrets(cfg) if not os.environ.get(n)]
         if missing:

@@ -13,6 +13,14 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Changed
+
+- **Cloud projects are local git repos by default.** `robert cloud new` creates the
+  project's repo in the host workspace and nothing leaves the host. `--github` creates a
+  private GitHub repo as well, and `robert cloud publish <project>` adds one later; for a
+  published project the host pushes after each turn, as before. `gh` is needed only for
+  publishing.
+
 ## [0.3.0] — 2026-10-31
 
 This release makes robert's answers harder to fool, robert included. Every answer now

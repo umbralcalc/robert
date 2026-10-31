@@ -21,7 +21,8 @@ every edit to a stochadex config. If your agent can't load skills, read them at
   download them, or anything else, yourself.
 - Commit after each answered experiment, each loop step whose gate passes, and each
   intervention, with a message naming it (`git commit -am "E003: ..."`). Don't
-  push; the host pushes your commits.
+  push or add remotes; the host keeps your commits, and pushes them only for a
+  project the user has published.
 
 ## Data and the network
 

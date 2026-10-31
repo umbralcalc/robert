@@ -18,7 +18,8 @@ flowchart LR
   box -->|only via proxy| egress[allowlisting proxy]
   egress --> api[model API]
   egress --> data[hosts in data/licences.yaml]
-  you <-->|clone, push| gh[(project repo on GitHub)]
+  you --> ws[(project git repo in the host workspace)]
+  ws -.->|only if published| gh[(GitHub)]
 ```
 
 ## Runners
@@ -40,7 +41,7 @@ container continues the last one.
 
 - **Fresh each time:** read-only root filesystem, non-root user, no Linux capabilities, and limits of 2 CPUs, 4 GB and 512 processes.
 - **Network:** an internal Docker network whose only way out is a squid proxy. It allows the runner's model API and the hosts in each project's `data/licences.yaml`, and nothing else; see its log with `docker exec robert-egress tail /var/log/squid/access.log`. Managed Agents' server-side web tools are off, so they can't bypass it.
-- **Project:** cloned on the host and mounted at `/workspace/<project>`. The agent commits; the host pushes with its own git credentials, so no GitHub token enters a sandbox.
+- **Project:** a git repo in the host workspace (`~/.robert/cloud/projects/<project>`), mounted at `/workspace/<project>`. The agent commits there. Nothing leaves the host unless you publish the project: `new --github` at the start, or `robert cloud publish <project>` later, creates a private GitHub repo, and from then on the host pushes after each turn with its own credentials. No credential enters a sandbox either way.
 
 Limits of this first version:
 - Concurrent sessions share one proxy, so its allowlist is the union of the active projects' hosts.
@@ -49,7 +50,7 @@ Limits of this first version:
 
 ## Bring it up
 
-Common to every runner: Docker running, `gh` signed in, and robert with the cloud extra:
+Common to every runner: Docker running and robert with the cloud extra. `gh` signed in is needed only to publish projects to GitHub:
 
 ```bash
 pip install 'robert-ai[cloud]'

@@ -2,9 +2,11 @@
 
 Anthropic runs that runner's agent loop; this host runs its tools. It long-polls
 the self-hosted environment's work queue (outbound only), and for each session it
-reads the session's `robert_project` / `robert_repo` metadata with the host's own
-credentials, then runs one sandbox from the shared `sandbox` module, which clones
-the repo, opens egress to the project's data hosts, and pushes afterwards.
+reads the session's `robert_project` (and, for a project published to GitHub,
+`robert_repo`) metadata with the host's own credentials, then runs one sandbox from
+the shared `sandbox` module, which prepares the project's repo in the host
+workspace, opens egress to the project's data hosts, and pushes afterwards if the
+project has a remote.
 CLI runners don't need this process: `robert cloud chat` starts their sandboxes.
 """
 
@@ -27,8 +29,8 @@ async def _serve_one(cfg: Config, control, work, environment_key: str) -> None:
     session = await control.beta.sessions.retrieve(session_id)
     meta = session.metadata or {}
     project, repo = meta.get("robert_project"), meta.get("robert_repo")
-    if not project or not repo:
-        print(f"[{session_id}] no robert_project/robert_repo metadata; refusing")
+    if not project:
+        print(f"[{session_id}] no robert_project metadata; refusing")
         await control.beta.environments.work.stop(work.id, environment_id=work.environment_id)
         return
     path = await asyncio.to_thread(sandbox.ensure_repo, cfg, project, repo)

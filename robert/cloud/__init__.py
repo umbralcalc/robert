@@ -1,8 +1,9 @@
 """robert in the cloud: one locked-down sandbox, any agent.
 
 - `sandbox`: what every run shares. The robert image, the egress proxy whose
-  allowlist comes from each project's `data/licences.yaml`, and the project repo,
-  cloned and pushed on the host so the GitHub credential never enters a container.
+  allowlist comes from each project's `data/licences.yaml`, and the project's git
+  repo in the host workspace: local by default, and pushed to GitHub by the host
+  only for a project published there, so no credential ever enters a container.
 - `runners`: what drives the work inside the sandbox, behind one interface
   (`turn(message) -> events`). `managed-agents` (Anthropic runs the loop; our
   host runs the tools), `claude-code` (Claude Code headless in the sandbox), and
