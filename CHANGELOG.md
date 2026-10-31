@@ -15,6 +15,18 @@ created with, so a comparison between runs is always like for like.
 
 ## [0.2.0] — 2026-10-31
 
+This release makes robert question-led and runnable in the cloud with any agent. The
+user asks questions; robert answers each one as an experiment, with its assumptions
+stated, its evidence cited and follow-ups suggested, and makes every build choice
+itself. Projects can run in a locked-down sandbox from the robert image, driven by
+Managed Agents, Claude Code or any agent CLI, with network access limited to the
+model API and the project's licensed data hosts.
+
+**Upgrading from 0.1.** Existing projects keep working; `experiments/` is created by
+the first `ask`. For the cloud, install `robert-ai[cloud]` and run
+`robert cloud configure`; the sandbox images are `ghcr.io/umbralcalc/robert:0.2.0` and
+`ghcr.io/umbralcalc/robert-claude-code:0.2.0`.
+
 ### Added
 
 - **Experiments: the unit the user works with.** The user asks a question and robert
