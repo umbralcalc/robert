@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "The AI simulation scientist: drives stochadex projects through the discovery-and-warrant loop, with every gate enforced by the robert MCP server.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
