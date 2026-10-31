@@ -13,6 +13,27 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Added
+
+- **robert in the cloud** (`robert-ai[cloud]`, see `cloud/README.md`): one locked-down
+  sandbox, any agent. Every run gets a fresh container from the robert image (non-root,
+  read-only, no capabilities) on an internal network whose only way out is a proxy
+  allowing the runner's model API and the hosts in the project's `data/licences.yaml`.
+  Project repos are cloned and pushed on the host, so no GitHub token enters a sandbox.
+- **Runners**, behind one `turn(message) -> events` interface: `managed-agents` (a
+  Managed Agents agent and self-hosted environment in `cloud/agents/robert/` for
+  `ant apply`, served by `robert cloud host`), `claude-code` (Claude Code headless in the
+  sandbox, from the new `robert-claude-code` image), and `command` (any agent CLI from a
+  configured template). All get the same instructions and skills.
+- `robert cloud new --runner ...` and `robert cloud chat` create a project and talk to
+  its agent from a terminal.
+- The robert image installs the cloud extra and the skills, so it is the sandbox base.
+
+### Fixed
+
+- The `stochadex-model` skill's frontmatter is now strict YAML, as the Skills API
+  requires; `robert adapters` parses it strictly so this cannot regress.
+
 ## [0.1.0] — 2026-10-31
 
 The first release of robert, the method layer of an AI simulation scientist. It

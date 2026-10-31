@@ -26,7 +26,8 @@ dependencies = [
 
 [project.optional-dependencies]
 arrow = ["pyarrow>=15"]
-dev = ["pytest>=8", "build>=1.2"]
+cloud = ["anthropic>=2.3"]
+dev = ["pytest>=8", "build>=1.2", "anthropic>=2.3"]
 
 [project.urls]
 Homepage = "https://github.com/umbralcalc/robert"
@@ -42,7 +43,7 @@ version = { attr = "robert.__version__" }
 include = ["robert*"]
 
 [tool.setuptools.package-data]
-robert = ["stochadex.json"]
+robert = ["stochadex.json", "cloud/instructions.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

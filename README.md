@@ -106,7 +106,8 @@ plugin manifest. CI fails if they drift.
 | --- | --- |
 | Image | `ghcr.io/umbralcalc/robert:<version>` contains robert, the locked stochadex (accelerated build), Python and git. Run `docker run --rm -it -v "$PWD:/work" ghcr.io/umbralcalc/robert status`. |
 | Dev container / Codespaces | Projects from `robert init` open in the robert image. For any other repo, add the feature `"ghcr.io/umbralcalc/robert/robert:0": {}` to its `devcontainer.json`. |
-| Cloud coding agents | Use the one-line installer with `ROBERT_NO_AGENTS=1` as the environment's setup script, or start the agent in the robert image. |
+| robert as a cloud agent | A Managed Agents agent whose tools run in a fresh, locked-down sandbox from the robert image on your own host, with egress limited to each project's licensed data hosts. See [cloud/README.md](cloud/README.md). |
+| Other cloud coding agents | Use the one-line installer with `ROBERT_NO_AGENTS=1` as the environment's setup script, or start the agent in the robert image. |
 | MCP over the network | `robert mcp --http` serves streamable HTTP at `http://127.0.0.1:8765/mcp`. Binding to anything else requires a bearer token: `ROBERT_MCP_TOKEN=... robert mcp --http --host 0.0.0.0`. |
 
 ## Releases

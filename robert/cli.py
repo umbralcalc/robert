@@ -66,7 +66,52 @@ def build_parser() -> argparse.ArgumentParser:
                        help="agents to register (claude, cursor); default: all found")
     setup.add_argument("--no-agents", action="store_true", help="install stochadex only")
     sub.add_parser("adapters", help="Render agent adapters from the skills source")
+    cloud = sub.add_parser("cloud", help="Run robert as a cloud agent (needs robert-ai[cloud])")
+    csub = cloud.add_subparsers(dest="cloud_command", required=True)
+    conf = csub.add_parser("configure", help="Record the agent and environment IDs")
+    conf.add_argument("--lock", help="the claude-lock.json `ant apply` wrote "
+                      "(needed for the managed-agents runner)")
+    conf.add_argument("--github-owner", default="umbralcalc")
+    conf.add_argument("--image", help="sandbox image; default: this robert version's image")
+    conf.add_argument("--workspace", help="host directory for project repos")
+    new = csub.add_parser("new", help="Create a project repo and start chatting")
+    new.add_argument("project")
+    new.add_argument("--description", required=True, help="the question, in your words")
+    new.add_argument("--runner", default="managed-agents",
+                     choices=["managed-agents", "claude-code", "command"],
+                     help="which agent drives the project")
+    talk = csub.add_parser("chat", help="Reopen a project's session")
+    talk.add_argument("project")
+    csub.add_parser("host", help="Claim sessions and run each in a fresh sandbox")
+    csub.add_parser("worker", help="(inside a sandbox) serve one claimed session")
+    agent = csub.add_parser("agent", help="(inside a sandbox) start a CLI agent for one turn")
+    agent.add_argument("runner", choices=["claude-code"])
+    agent.add_argument("--model", required=True)
+    agent.add_argument("--continue", dest="cont", action="store_true")
+    agent.add_argument("message")
     return parser
+
+
+def cloud_main(ns: argparse.Namespace) -> dict[str, Any] | None:
+    from . import cloud
+    if ns.cloud_command == "configure":
+        return cloud.configure(ns.lock, ns.github_owner, ns.image, ns.workspace)
+    if ns.cloud_command == "new":
+        from .cloud.chat import new
+        new(ns.project, ns.description, ns.runner)
+    elif ns.cloud_command == "chat":
+        from .cloud.chat import chat
+        chat(ns.project)
+    elif ns.cloud_command == "host":
+        from .cloud.host import run
+        run()
+    elif ns.cloud_command == "worker":
+        from .cloud.worker import main as worker
+        worker()
+    elif ns.cloud_command == "agent":
+        from .cloud.agent import AGENTS
+        AGENTS[ns.runner](ns.message, ns.model, ns.cont)
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -88,6 +133,13 @@ def main(argv: list[str] | None = None) -> int:
         if ns.command == "setup":
             from .setup import setup
             result = setup(ns.stochadex, ns.accelerated, ns.agents, ns.no_agents)
+        elif ns.command == "cloud":
+            try:
+                result = cloud_main(ns)
+            except ImportError as e:
+                raise MethodError(f"{e}; install the cloud extra: pip install 'robert-ai[cloud]'")
+            if result is None:
+                return 0
         else:
             tool = next(t for t in TOOLS if t.name == ns.command)
             args = {k: v for k, v in vars(ns).items()

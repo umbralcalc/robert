@@ -1,0 +1,5 @@
+# Tools run on our own host: `robert cloud host` claims each session and runs it
+# in a fresh sandbox from the robert image (see robert/cloud/host.py).
+name: robert-self-hosted
+description: robert sessions run in per-session sandboxes from the robert image
+config: {type: self_hosted}
