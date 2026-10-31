@@ -150,12 +150,17 @@ TOOLS: list[Tool] = [
           "from_follow_up": {**STR, "description": "a suggested follow-up, e.g. E002.1"}},
          [], experiments.ask),
     Tool("answer",
-         "Record the answer to an experiment: the answer in the user's terms, every "
-         "assumption it rests on (robert's build choices included, each owned and with "
-         "its sensitivity), the evidence behind every number, and follow-up questions.",
+         "Record the answer to an experiment: the answer in the user's terms; every "
+         "assumption it rests on (owner, kind: implementation, operationalisation or "
+         "belief, and sensitivity); the evidence behind every number; the strongest case "
+         "against it; every analysis tried; a report on each standing question; and "
+         "follow-ups, ranked by value, at least one naming the explanations it would "
+         "tell apart.",
          {"experiment": STR, "answer": STR,
+          "hypotheses": {**STRS, "description": "the competing explanations considered"},
           "assumptions": {"type": "array", "items": {"type": "object", "properties": {
               "assumption": STR, "owner": {"type": "string", "enum": experiments.OWNERS},
+              "kind": {"type": "string", "enum": experiments.CHOICE_KINDS},
               "sensitivity": {"type": "string", "enum": experiments.SENSITIVITY},
               "why": STR}}},
           "evidence": {"type": "array", "items": {"type": "object", "properties": {
@@ -163,13 +168,33 @@ TOOLS: list[Tool] = [
               "ref": {**STR, "description": "out/ path, ledger hash, test id, query id "
                       "or file path"},
               "shows": STR}}},
+          "against": {"type": "array", "description": "the strongest evidence or argument "
+                      "against the answer, or the result that would refute it",
+                      "items": {"type": "object", "properties": {
+                          "point": STR,
+                          "kind": {"type": "string", "enum": experiments.EVIDENCE_KINDS},
+                          "ref": STR}}},
+          "tried": {"type": "array", "description": "every analysis tried, kept or not",
+                    "items": {"type": "object", "properties": {
+                        "analysis": STR, "outcome": STR, "ref": STR}}},
+          "reports": {"type": "array", "description": "one per standing question; "
+                      "\"nothing to report\" is a report",
+                      "items": {"type": "object", "properties": {
+                          "standing": STR, "report": STR}}},
           "follow_ups": {"type": "array", "items": {"type": "object", "properties": {
               "question": STR,
               "kind": {"type": "string", "enum": experiments.FOLLOW_UP_KINDS},
+              "value": {"type": "string", "enum": experiments.VALUES},
+              "discriminates": {**STRS, "description": "the explanations its result "
+                                "would tell apart"},
               "why": STR}}},
           "supersedes": {**STR, "description": "an earlier experiment this answer replaces"}},
-         ["experiment", "answer", "assumptions", "evidence", "follow_ups"],
+         ["experiment", "answer", "assumptions", "evidence", "against", "follow_ups"],
          experiments.answer),
+    Tool("standing",
+         "List the standing questions every answer must report on, add the user's own, "
+         "or retire one. They are the channel for what nobody thought to ask about.",
+         {"add": STRS, "retire": STRS}, [], experiments.standing),
     Tool("context",
          "What robert knows so far, compressed: answered questions with their live "
          "assumptions, open questions, and follow-ups not yet taken up. With focus, the "

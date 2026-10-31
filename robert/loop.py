@@ -146,6 +146,8 @@ def init(path: str, name: str, description: str, level: str,
     for d in ("model", "analysis", "learned", "out", "figures", "ledger", "experiments"):
         project.path(d).mkdir(exist_ok=True)
         (project.path(d) / ".gitkeep").touch()
+    from .experiments import write_default_standing
+    standing_file = write_default_standing(project)
     if git and shutil.which("git") and not (root / ".git").exists():
         subprocess.run(["git", "init", "-q"], cwd=root, check=False)
 
@@ -156,7 +158,7 @@ def init(path: str, name: str, description: str, level: str,
     if found and found != deps.lock()["version"]:
         gate.note(f"stochadex {found} found; this robert release locks "
                   f"{deps.lock()['version']}")
-    return _done(project, gate, [".robert/project.yaml", "domain.yaml", *files],
+    return _done(project, gate, [".robert/project.yaml", "domain.yaml", standing_file, *files],
                  "pose", "init", root=str(root))
 
 

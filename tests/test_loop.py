@@ -43,6 +43,7 @@ def test_walkthrough_runs_the_whole_loop(tmp_path, cli_env):
     e1, e2 = p.read_yaml("experiments/E001.yaml"), p.read_yaml("experiments/E002.yaml")
     assert e1["status"] == "answered" and e1["model_variant"] == "v2"
     assert {a["owner"] for a in e1["assumptions"]} == {"user", "robert"}
+    assert e1["against"] and len(e1["tried"]) == 2 and len(e1["reports"]) == 4
     assert e2["parent"] == "E001" and e2["from_follow_up"] == "E001.1"
 
 

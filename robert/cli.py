@@ -75,11 +75,20 @@ EXAMPLES = {
     "answer": """example:
   robert answer --experiment E002 \\
     --answer "Yes: the model reproduces 2.0 home and 1.0 away goals per match" \\
+    --hypotheses "goals arrive at random" --hypotheses "red cards change the game" \\
     --assumptions '[{"assumption": "goals arrive as a Poisson process",
-                     "owner": "robert", "sensitivity": "untested"}]' \\
+                     "owner": "robert", "kind": "implementation", "sensitivity": "untested"},
+                    {"assumption": "reproduces means within 10% of each rate",
+                     "owner": "robert", "kind": "operationalisation"}]' \\
     --evidence '[{"kind": "test", "ref": "backtest-goals"}]' \\
+    --against '[{"point": "totals alone cannot tell when goals happen"}]' \\
+    --tried '[{"analysis": "posterior_estimation on the rates",
+               "outcome": "abandoned: proposals went negative"}]' \\
+    --reports '[{"standing": "S1", "report": "nothing to report"}, ...]' \\
     --follow-ups '[{"question": "Does a red card change the scoring rate?",
-                    "kind": "test-assumption"}]'""",
+                    "kind": "test-assumption", "value": "high",
+                    "discriminates": ["goals arrive at random",
+                                      "red cards change the game"]}]'""",
     "revise": """example:
   robert revise --monitors '[{"name": "drift", "partition": "population",
                               "script": "analysis/drift.py", "action": "recalibrate"}]'""",

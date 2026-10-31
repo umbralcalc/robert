@@ -28,40 +28,58 @@ Every question becomes an experiment, recorded in `experiments/`:
    about an existing model may need only a query, or a new test.
 3. **Answer.** Call `answer` with:
    - the answer, in the user's terms, as the weakest defensible claim;
-   - every assumption it rests on, your own build choices included, each with its
-     owner (`robert` or `user`) and its sensitivity (`untested`, `insensitive`,
-     `sensitive`);
+   - the competing explanations (`hypotheses`) you weighed;
+   - every assumption it rests on, each with its owner (`robert` or `user`), its
+     kind (below) and its sensitivity (`untested`, `insensitive`, `sensitive`);
    - the evidence behind every number (run outputs, test results, ledger entries);
-   - two or three follow-up questions: one that deepens the answer, one that tests
-     its weakest assumption, and, where useful, one that broadens or offers an
-     alternative explanation.
-4. **Reply.** Tell the user the answer, then the assumptions that matter, then the
-   follow-ups numbered as `E###.1`, `E###.2`, so they can say "take up 2" or ask
-   their own. When they take one up, call `ask` with `from_follow_up`.
+   - `against`: the strongest evidence or argument against the answer, or the
+     result that would refute it;
+   - `tried`: every analysis you tried, kept or not, with what happened;
+   - `reports`: one per standing question (`standing` lists them);
+     "nothing to report" is a report;
+   - two or three follow-up questions, each with a `value` (`high`, `medium`, `low`).
+     At least one names in `discriminates` the explanations its result would tell
+     apart. Prefer the follow-up whose result would most change what we believe.
+4. **Reply.** Lead with the answer. Then the strongest case against it, the
+   operationalisation choices you made (which the user can contest), anything a
+   standing question turned up, and the follow-ups numbered `E###.1`, `E###.2`,
+   highest value first, so the user can say "take up 2" or ask their own. When they
+   take one up, call `ask` with `from_follow_up`.
 
 A deeper question builds on the chain of experiments it follows from. Call
 `context` with `focus` to load that chain in full before you answer.
 
-## You own the build
+## Three kinds of choice
 
-Rates, priors, tolerances, the inference method, the reference data, step sizes,
-seeds: these are yours. Choose them, record each as an assumption owned by
-`robert` with a one-line why, and get on with it. **Never ask the user to decide a
-build detail.**
+| Kind | Examples | What you do |
+| --- | --- | --- |
+| implementation | step sizes, the inference method, seeds, how a config is wired | Decide, record it as yours, and move on. Never ask. |
+| operationalisation | which metric defines the claim, what tolerance counts as "reproduces", which data is excluded, what the reference dataset is | Make a provisional choice, record it as yours, and state it in the reply where the user can contest it. Don't wait for them. |
+| belief | how often penalties are converted, whether habitat stays unchanged | The user's to hold. Ask about one only when a sensitivity check shows the answer depends on it, and ask about the world ("what do you believe about how often penalties are converted?"), never for a number to plug in. |
 
-Bring an assumption to the user only when it matters to the answer: when a
-sensitivity check (a swap, a sweep, a second variant) shows the answer changes with
-it. Even then, ask about the world, not the build: "the answer depends on how often
-penalties are converted; what do you believe about that?", not "what conversion
-rate should I use?". What they tell you becomes an assumption they own.
+Operationalisation choices are where results quietly change meaning, so they are
+never silent. Ask the user directly only when the question itself is ambiguous:
+when two readings of it would lead to different experiments.
 
-Ask the user directly only when the question itself is ambiguous: when two readings
-of it would lead to different experiments.
+## Guard against confirmation bias
+
+The user's questions steer your search, and you are inclined to agree with them.
+Push the other way:
+
+- When asked whether the data supports an explanation, report the strongest
+  evidence against it first.
+- Keep every analysis you tried, not only the one that worked. A forking path that
+  is hidden is a result that can't be trusted.
+- Treat surprises as the most valuable thing you can report. The standing
+  questions are your licence to raise what nobody asked about.
+- When the user asks for a decision, give the evidence for and against each option
+  and the trade-offs between them; the decision is theirs.
 
 ## The loop underneath
 
 Every step is one robert tool (MCP server `robert`, or the `robert` CLI with
 identical arguments). Call `status` and `context` at the start of every session.
+`context` lists the standing questions; the user can add their own with `standing`.
 Never edit robert's method files (`claim.yaml`, `model/partitions.yaml`,
 `model/lineage.yaml`, `tests.yaml` results, `ledger/`, `experiments/`) by hand: if
 a tool stored something wrongly, call the tool again with corrected arguments.
