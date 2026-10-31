@@ -134,11 +134,17 @@ def build_parser() -> argparse.ArgumentParser:
     new = csub.add_parser("new", help="Create a project repo and start chatting")
     new.add_argument("project")
     new.add_argument("--description", required=True, help="the question, in your words")
+    new.add_argument("--github", action="store_true",
+                     help="also create a private GitHub repo and push to it after each "
+                     "turn; by default the project stays a local git repo")
     new.add_argument("--runner", default="managed-agents",
                      choices=["managed-agents", "claude-code", "command"],
                      help="which agent drives the project")
     talk = csub.add_parser("chat", help="Reopen a project's session")
     talk.add_argument("project")
+    pub = csub.add_parser("publish", help="Push a local project to a new private GitHub repo")
+    pub.add_argument("project")
+    pub.add_argument("--owner", help="GitHub owner; default: the config's github_owner")
     csub.add_parser("host", help="Claim sessions and run each in a fresh sandbox")
     csub.add_parser("worker", help="(inside a sandbox) serve one claimed session")
     agent = csub.add_parser("agent", help="(inside a sandbox) start a CLI agent for one turn")
@@ -155,10 +161,13 @@ def cloud_main(ns: argparse.Namespace) -> dict[str, Any] | None:
         return cloud.configure(ns.lock, ns.github_owner, ns.image, ns.workspace)
     if ns.cloud_command == "new":
         from .cloud.chat import new
-        new(ns.project, ns.description, ns.runner)
+        new(ns.project, ns.description, ns.runner, ns.github)
     elif ns.cloud_command == "chat":
         from .cloud.chat import chat
         chat(ns.project)
+    elif ns.cloud_command == "publish":
+        from .cloud.chat import publish
+        publish(ns.project, ns.owner)
     elif ns.cloud_command == "host":
         from .cloud.host import run
         run()

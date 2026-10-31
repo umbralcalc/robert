@@ -109,26 +109,63 @@ def _git(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
                           capture_output=True, text=True, env={**os.environ, **GIT_ENV})
 
 
-def ensure_repo(cfg: Config, project: str, repo: str) -> Path:
-    """Clone the project repo into the host workspace, or bring it up to date."""
+def _has_remote(path: Path) -> bool:
+    return bool(_git("remote", cwd=path).stdout.strip())
+
+
+def ensure_repo(cfg: Config, project: str, repo: str | None = None) -> Path:
+    """The project's git repo in the host workspace.
+
+    A project is a local git repo by default; nothing leaves the host. When the
+    project has a GitHub remote (`repo`, as owner/name), it is cloned if missing and
+    brought up to date before each turn."""
     path = cfg.projects / project
-    if not (path / ".git").exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
+    if (path / ".git").exists():
+        if _has_remote(path):
+            _git("pull", "--ff-only", "-q", cwd=path)
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if repo:
         r = _git("clone", "-q", f"https://github.com/{repo}.git", str(path))
         if r.returncode != 0:
             raise MethodError(f"could not clone {repo}: {r.stderr.strip()}")
-    else:
-        _git("pull", "--ff-only", "-q", cwd=path)
+        return path
+    path.mkdir(exist_ok=True)
+    _git("init", "-q", "-b", "main", cwd=path)
+    (path / "README.md").write_text(f"# {project}\n\nA robert project.\n")
+    _git("add", "README.md", cwd=path)
+    _git("-c", "user.name=robert", "-c", "user.email=robert@localhost",
+         "commit", "-q", "-m", "Start the project", cwd=path)
     return path
 
 
 def push(path: Path) -> str:
-    """Push what the agent committed, with the host's git credentials."""
+    """Push what the agent committed, with the host's git credentials, when the
+    project has a remote; a local project keeps its commits on the host."""
+    if not _has_remote(path):
+        return "kept locally"
     ahead = _git("rev-list", "--count", "@{u}..HEAD", cwd=path)
     if ahead.returncode != 0 or ahead.stdout.strip() in ("", "0"):
         return "nothing to push"
     r = _git("push", "-q", cwd=path)
     return "pushed" if r.returncode == 0 else f"push failed: {r.stderr.strip()[-300:]}"
+
+
+def publish(path: Path, repo: str) -> str:
+    """Create a private GitHub repo for a local project and push it there."""
+    if _has_remote(path):
+        raise MethodError(f"{path.name} already has a remote")
+    made = subprocess.run(["gh", "repo", "create", repo, "--private",
+                           "--description", f"robert project {path.name}"],
+                          capture_output=True, text=True)
+    if made.returncode != 0:
+        raise MethodError(f"could not create {repo}: {made.stderr.strip()}")
+    _git("remote", "add", "origin", f"https://github.com/{repo}.git", cwd=path)
+    branch = _git("branch", "--show-current", cwd=path).stdout.strip() or "main"
+    r = _git("push", "-q", "-u", "origin", branch, cwd=path)
+    if r.returncode != 0:
+        raise MethodError(f"created {repo} but the push failed: {r.stderr.strip()}")
+    return f"https://github.com/{repo}"
 
 
 def state_dir(project: str, runner: str) -> Path:

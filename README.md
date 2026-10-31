@@ -81,7 +81,7 @@ repairs or upgrades the install, and `robert setup --accelerated` swaps in the B
 DuckDB build of stochadex. Set `ROBERT_VERSION=0.2.0` to install a specific release,
 or `ROBERT_NO_AGENTS=1` to skip agent registration.
 
-Until the first PyPI release is out, install from GitHub instead:
+To try unreleased changes, install from GitHub instead:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/umbralcalc/robert/main/install.sh | ROBERT_SOURCE=git+https://github.com/umbralcalc/robert sh

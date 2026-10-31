@@ -152,3 +152,18 @@ def test_configure_keeps_runner_settings(tmp_path, monkeypatch):
 def test_skill_frontmatter_is_strict_yaml(skill):
     front = _frontmatter(skill)
     assert front["name"] == skill.parent.name and front["description"]
+
+
+def test_projects_are_local_git_repos_by_default(tmp_path):
+    import subprocess
+    from robert.cloud.sandbox import ensure_repo, push
+    cfg = Config(workspace=str(tmp_path / "projects"))
+    path = ensure_repo(cfg, "trial")
+    log = subprocess.run(["git", "-C", str(path), "log", "--oneline"],
+                         capture_output=True, text=True).stdout
+    remotes = subprocess.run(["git", "-C", str(path), "remote"],
+                             capture_output=True, text=True).stdout
+    assert "Start the project" in log and remotes.strip() == ""
+    assert push(path) == "kept locally"
+    (path / "notes.md").write_text("kept\n")
+    assert ensure_repo(cfg, "trial") == path and (path / "notes.md").exists()
