@@ -15,6 +15,17 @@ created with, so a comparison between runs is always like for like.
 
 ## [0.3.0] — 2026-10-31
 
+This release makes robert's answers harder to fool, robert included. Every answer now
+states the strongest case against itself, keeps every analysis tried, and reports on
+the project's standing questions, the channel for surprises nobody thought to ask
+about. Follow-ups are ranked by how much their result would change what we believe,
+and robert states the operationalisation choices it makes instead of keeping them
+silent.
+
+**Upgrading from 0.2.** `answer` now requires `against`, and every assumption needs a
+`kind` (`implementation`, `operationalisation` or `belief`). Projects created with 0.2
+have no standing questions until you add some with `robert standing --add "..."`.
+
 ### Added
 
 - **Standing questions** (`standing.yaml`, the `standing` tool): questions posed once
