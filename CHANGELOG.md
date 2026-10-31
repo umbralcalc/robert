@@ -13,6 +13,17 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Changed
+
+- **Long turns are never silent and can be stopped cleanly.** While a CLI-runner turn
+  is quiet (a long tool call), `robert cloud chat` prints a progress line with the
+  elapsed time every 30 seconds. Ctrl-C stops the turn's sandbox, keeps its work, and
+  returns to the prompt; the next message tells the agent its last turn was stopped. A
+  turn also stops at a time limit (`max_turn_minutes` per runner, default 20).
+- The agent instructions now ask it to keep turns short: say before a run that will
+  take more than a couple of minutes, end the turn before one that will take more
+  than about five, and write only the outputs it needs.
+
 ### Fixed
 
 - **An approved data source now actually opens the sandbox's network.** The egress

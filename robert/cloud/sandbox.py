@@ -36,6 +36,12 @@ def _docker(*args: str, check: bool = True, stdin: str | None = None
     return r
 
 
+def stop_container(name: str) -> None:
+    """Stop a sandbox (it was started with --rm, so this also removes it). SIGTERM
+    first, so the agent can exit cleanly."""
+    _docker("stop", "--time", "10", name, check=False)
+
+
 def ensure_docker() -> None:
     """Fail early, and plainly, when the Docker daemon isn't running."""
     if _docker("info", "--format", "{{.ServerVersion}}", check=False).returncode != 0:

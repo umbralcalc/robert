@@ -192,3 +192,75 @@ def test_a_running_proxy_reloads_its_allowlist_with_hup(monkeypatch, tmp_path):
     assert "api.example.com" in hosts
     assert calls == [("kill", "--signal", "HUP", sandbox.PROXY)]
     assert "api.example.com" in (tmp_path / "cloud/egress/allowlist.txt").read_text()
+
+
+class SlowProc:
+    """A stand-in for the docker process: emits lines with gaps between them."""
+
+    def __init__(self, lines, gap):
+        self.lines, self.gap = lines, gap
+
+    @property
+    def stdout(self):
+        import time
+        for line in self.lines:
+            time.sleep(self.gap)
+            yield line
+
+
+def test_quiet_turns_tick_and_long_ones_stop():
+    from robert.cloud.runners import TurnTimeout, stream_with_progress
+    out = list(stream_with_progress(SlowProc(["a\n", "b\n"], 0.15), 1, every=0.05))
+    assert out[-1] == "b\n" and any(getattr(o, "kind", "") == "progress" for o in out)
+    with pytest.raises(TurnTimeout):
+        list(stream_with_progress(SlowProc(["a\n"] * 50, 0.05), 0.002, every=0.02))
+
+
+def test_ctrl_c_stops_the_turn_and_returns_to_the_prompt(monkeypatch, capsys):
+    from robert.cloud import chat
+    from robert.cloud.runners import Event
+
+    def turn():
+        try:
+            yield Event("text", "working")
+            yield Event("text", "more")
+        except KeyboardInterrupt:
+            yield Event("error", "The turn ended early because you stopped it.")
+            yield Event("done")
+
+    shown = []
+
+    def show(event):
+        shown.append(event.text)
+        if event.text == "working":
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(chat, "show", show)
+    assert chat.run_turn(turn()) is True
+    assert shown == ["working", "The turn ended early because you stopped it.", ""]
+
+
+def test_an_interrupted_turn_resumes_with_a_note(monkeypatch, tmp_path):
+    from robert.cloud import runners
+    sent = {}
+    monkeypatch.setattr(runners.sandbox, "ensure_repo", lambda *a: tmp_path)
+    monkeypatch.setattr(runners.sandbox, "ensure_egress", lambda *a: ["api.anthropic.com"])
+    monkeypatch.setattr(runners.sandbox, "active_projects", lambda cfg: [])
+    monkeypatch.setattr(runners.sandbox, "push", lambda path: "kept locally")
+    monkeypatch.setattr(runners.sandbox, "container_args",
+                        lambda image, name, project, path, env, command, mounts:
+                        sent.setdefault("command", command) and ["true"])
+
+    class Done:
+        stdout, stderr = iter([]), None
+
+        def wait(self):
+            return 0
+
+    monkeypatch.setattr(runners.subprocess, "Popen", lambda *a, **k: Done())
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    entry = {"runner": "claude-code", "turns": 2, "interrupted": True}
+    list(runners.ClaudeCode().turn(Config(), "p", entry, "carry on", lambda e: False))
+    assert sent["command"][-1].startswith("[Your previous turn was stopped")
+    assert "--continue" in sent["command"]
+    assert entry == {"runner": "claude-code", "turns": 3}
