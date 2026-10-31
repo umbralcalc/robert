@@ -25,7 +25,7 @@ use the path `robert doctor` prints.
 
 ```bash
 stochadex --version
-# stochadex v0.24.0 darwin/arm64
+# stochadex v0.25.0 darwin/arm64
 # features: arrow postgres s3          <- portable build
 # features: arrow cblas duckdb postgres s3   <- accelerated build
 stochadex catalogue    # JSON: every registered iteration, source, sink, macro, kernel, ...

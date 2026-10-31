@@ -27,6 +27,8 @@ created with, so a comparison between runs is always like for like.
 
 ### Changed
 
+- **stochadex v0.25.0.** The lock moves to stochadex v0.25.0 and the supported range
+  widens to `>=0.24.0,<0.26.0`. The image's default build arg follows the lock.
 - **Cloud projects are local git repos by default.** `robert cloud new` creates the
   project's repo in the host workspace and nothing leaves the host. `--github` creates a
   private GitHub repo as well, and `robert cloud publish <project>` adds one later; for a

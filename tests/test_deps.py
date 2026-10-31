@@ -45,8 +45,8 @@ def test_lock_is_well_formed():
 
 
 def test_supported_range():
-    assert deps.supported("v0.24.0") and deps.supported("0.24.9")
-    assert not deps.supported("v0.23.0") and not deps.supported("v0.25.0")
+    assert deps.supported("v0.24.0") and deps.supported("0.24.9") and deps.supported("v0.25.0")
+    assert not deps.supported("v0.23.0") and not deps.supported("v0.26.0")
 
 
 @pytest.mark.parametrize("system,machine,accel,name", [
