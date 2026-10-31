@@ -1,19 +1,19 @@
 {
   "repository": "umbralcalc/stochadex",
-  "version": "v0.24.0",
+  "version": "v0.25.0",
   "supported": [
     ">=0.24.0",
-    "<0.25.0"
+    "<0.26.0"
   ],
   "sha256": {
-    "stochadex-accel-darwin-amd64": "94118a9ac9d4578b235dbdba2898a5c2d8f5addfc66c899577aa7cd5234b1349",
-    "stochadex-accel-darwin-arm64": "f8a1883a8fdad6ba37bb33f5a075bf1671b9be0e5efed60538bc8479fec983df",
-    "stochadex-accel-linux-amd64": "ff431fbcb9388b8839e5ce5037b9c2a9a15f5d6969e7cf1963a14471399cc3c0",
-    "stochadex-accel-linux-arm64": "61601cb9ad0fccbd7d9212caf6d9fa275b388ffef52d17f3c3c0b34b18729498",
-    "stochadex-darwin-amd64": "5b502d9b799e173d47b64c34a6a1bd0241f3a618526fc0e281e6dbdf74c50585",
-    "stochadex-darwin-arm64": "92e09ff78e37cc0161aa2491192bcd37fc66c4fc3ecf194d659d6c2e384823b9",
-    "stochadex-linux-amd64": "0f9e0de8925629b722f48baaea4975f084b60f58a6255ccb01d6a24b2bec01e1",
-    "stochadex-linux-arm64": "4e811c5f5996ee277ad307eaa8d051940b6f7c25086937bb5cbe0507d9f4bd2b",
-    "stochadex-windows-amd64.exe": "196bbbf4ab74ee69cabb6dfedfefccbc6c9d22fcd81fc1aa1b56f669587579e7"
+    "stochadex-accel-darwin-amd64": "32799a78c78c0595f30bcfcf0ca71d7ecc4d60603494e9b1a27e5dfbbfe281bd",
+    "stochadex-accel-darwin-arm64": "1c0087f40ab2d4b94ea1bf9bb5d354027356690a82638258757c7c23fcc290b6",
+    "stochadex-accel-linux-amd64": "19e4ee1bc9c6aea84b727bdd3b5576c88c5fa20bdeeee3df2c66a3be716427bf",
+    "stochadex-accel-linux-arm64": "70df78d5efcd60fbb71fa5c92136f51ee6b2fddf57d5e7ccb5ca6ae35f8f0ce8",
+    "stochadex-darwin-amd64": "4efc061b6f7c1e8817b03b6dd8a3d03f58cb7c88861aa0d87d0e07ec08961eac",
+    "stochadex-darwin-arm64": "980014a7878dae36e1c808ec7c3c4b07a8e445b71c736c7667e181019075d17d",
+    "stochadex-linux-amd64": "397d45f088bffc239a41006b5041094c6477feebe784e7e49fd39d3fee80295b",
+    "stochadex-linux-arm64": "53dec1883bb5a07e936b410534e549e32f28447683124184a31b260c6bd368f6",
+    "stochadex-windows-amd64.exe": "339db08646df1bd552e0faaf45142942e37c22ab42c82dfa7faeafbb282d4c8d"
   }
 }
