@@ -13,6 +13,8 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-10-31
+
 ### Changed
 
 - **robert locks stochadex v0.24.0 and needs v0.24 or later.** The partition graph comes
@@ -45,4 +47,5 @@ created with, so a comparison between runs is always like for like.
 - Releases: this changelog, a prepare-release PR, tag-on-merge, and a release that
   publishes to PyPI (`robert-ai`), GitHub Releases and GHCR.
 
-[Unreleased]: https://github.com/umbralcalc/robert/commits/main
+[Unreleased]: https://github.com/umbralcalc/robert/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/umbralcalc/robert/releases/tag/v0.1.0
