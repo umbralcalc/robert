@@ -23,10 +23,24 @@ PROXY = "robert-egress"
 PROXY_IMAGE = "robert-egress:local"
 
 
-def _docker(*args: str, check: bool = True) -> subprocess.CompletedProcess:
+def _docker(*args: str, check: bool = True, stdin: str | None = None
+            ) -> subprocess.CompletedProcess:
+    """Run docker; a failure becomes a MethodError carrying docker's own message."""
     if not shutil.which("docker"):
-        raise MethodError("docker is not on PATH")
-    return subprocess.run(["docker", *args], check=check, text=True, capture_output=True)
+        raise MethodError("docker is not on PATH: install Docker Desktop (or Docker "
+                          "Engine) to run sandboxes")
+    r = subprocess.run(["docker", *args], text=True, capture_output=True, input=stdin)
+    if check and r.returncode != 0:
+        raise MethodError(f"`docker {' '.join(args[:3])}` failed: "
+                          f"{(r.stderr or r.stdout).strip()[-500:]}")
+    return r
+
+
+def ensure_docker() -> None:
+    """Fail early, and plainly, when the Docker daemon isn't running."""
+    if _docker("info", "--format", "{{.ServerVersion}}", check=False).returncode != 0:
+        raise MethodError("Docker isn't running: start Docker Desktop (or the docker "
+                          "daemon), wait until it's ready, and try again")
 
 
 def _exists(kind: str, name: str) -> bool:
@@ -44,6 +58,7 @@ def active_projects(cfg: Config) -> list[Path]:
 
 def ensure_egress(projects: list[Path], extra_hosts: list[str] | None = None) -> list[str]:
     """Start (or refresh) the internal network and its allowlisting proxy."""
+    ensure_docker()
     d = egress_dir()
     d.mkdir(parents=True, exist_ok=True)
     (d / "robert.conf").write_text(squid_conf())
@@ -53,8 +68,7 @@ def ensure_egress(projects: list[Path], extra_hosts: list[str] | None = None) ->
     if not _exists("network", NETWORK):
         _docker("network", "create", "--internal", NETWORK)
     if not _exists("image", PROXY_IMAGE):
-        subprocess.run(["docker", "build", "-t", PROXY_IMAGE, "-"], input=PROXY_DOCKERFILE,
-                       text=True, check=True, capture_output=True)
+        _docker("build", "-t", PROXY_IMAGE, "-", stdin=PROXY_DOCKERFILE)
     if not _exists("container", PROXY):
         _docker("run", "-d", "--name", PROXY, "--restart", "unless-stopped",
                 "-v", f"{d / 'robert.conf'}:/etc/squid/robert.conf:ro",

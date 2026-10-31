@@ -167,3 +167,15 @@ def test_projects_are_local_git_repos_by_default(tmp_path):
     assert push(path) == "kept locally"
     (path / "notes.md").write_text("kept\n")
     assert ensure_repo(cfg, "trial") == path and (path / "notes.md").exists()
+
+
+def test_docker_not_running_is_a_plain_error(monkeypatch):
+    import subprocess
+    from robert.cloud import sandbox
+    monkeypatch.setattr(sandbox.shutil, "which", lambda name: "/usr/bin/docker")
+    monkeypatch.setattr(sandbox.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(
+        a[0], 1, "", "failed to connect to the docker API"))
+    with pytest.raises(MethodError, match="Docker isn't running"):
+        sandbox.ensure_egress([])
+    with pytest.raises(MethodError, match="failed to connect to the docker API"):
+        sandbox._docker("network", "create", "x")
