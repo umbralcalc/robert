@@ -11,6 +11,7 @@ call, and asks you before any call the runner flags for approval.
 from __future__ import annotations
 
 import sys
+from typing import Iterator
 
 from ..project import MethodError
 from . import Config, project, projects, save_project
@@ -80,6 +81,8 @@ def show(event: Event) -> None:
         print(event.text, flush=True)
     elif event.kind == "tool":
         print(f"  · {event.tool}: {event.text}", flush=True)
+    elif event.kind == "progress":
+        print(f"    … {event.text}", flush=True)
     elif event.kind == "error":
         print(f"  ! {event.text}", file=sys.stderr, flush=True)
     elif event.kind == "ended":
@@ -89,7 +92,8 @@ def show(event: Event) -> None:
 def _ask(prompt: str) -> str:
     try:
         return input(prompt)
-    except EOFError:
+    except (EOFError, KeyboardInterrupt):
+        print()
         return ""
 
 
@@ -97,19 +101,40 @@ def confirm_on_terminal(event: Event) -> bool:
     return _ask(f"    allow {event.tool}: {event.text}? [y/N] ").strip().lower() == "y"
 
 
+def run_turn(events: Iterator[Event]) -> bool:
+    """Show a turn's events. Ctrl-C stops the turn (the runner stops its sandbox and
+    keeps the work) and returns to the prompt. Returns False if the session ended."""
+    ended = False
+    try:
+        for event in events:
+            show(event)
+            ended = ended or event.kind == "ended"
+    except KeyboardInterrupt:
+        print("\n  stopping the turn…", flush=True)
+        try:
+            show(events.throw(KeyboardInterrupt()))
+            for event in events:
+                show(event)
+                ended = ended or event.kind == "ended"
+        except (KeyboardInterrupt, StopIteration):
+            print("  stopped watching; the agent may still be finishing in its session",
+                  flush=True)
+    return not ended
+
+
 def converse(cfg: Config, name: str, entry: dict, first: str | None = None) -> None:
     driver = get(entry["runner"])
     message = first
+    print("(Ctrl-C stops a turn and keeps its work; an empty line or Ctrl-C at the "
+          "prompt leaves.)")
     while True:
         if message is None:
             message = _ask("\nyou> ").strip()
             if not message:
+                print(f"Reopen with: robert cloud chat {name}")
                 return
-        ended = False
-        for event in driver.turn(cfg, name, entry, message, confirm_on_terminal):
-            show(event)
-            ended = ended or event.kind == "ended"
+        alive = run_turn(driver.turn(cfg, name, entry, message, confirm_on_terminal))
         save_project(name, entry)
-        if ended or not sys.stdin.isatty():
+        if not alive or not sys.stdin.isatty():
             return
         message = None

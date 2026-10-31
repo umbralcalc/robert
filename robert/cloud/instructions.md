@@ -24,6 +24,17 @@ every edit to a stochadex config. If your agent can't load skills, read them at
   push or add remotes; the host keeps your commits, and pushes them only for a
   project the user has published.
 
+## Keeping turns short
+
+- The user waits while you work and can't reach you mid-turn. Before a run you
+  expect to take more than a couple of minutes, say what it is and roughly how long
+  it will take. If it will take more than about five minutes, end the turn there and
+  start it when the user says go.
+- Make runs fast: write only the outputs you need (the final estimate, or every n-th
+  step), and test a config on a small slice before the full run.
+- A turn that runs past its time limit is stopped, and a stopped turn keeps its work.
+  Commit at each step so nothing is lost.
+
 ## Data and the network
 
 - The sandbox reaches only your model provider's API and the hosts listed in the

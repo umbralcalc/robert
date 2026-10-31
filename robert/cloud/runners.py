@@ -18,7 +18,10 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import subprocess
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -33,7 +36,7 @@ ANTHROPIC_HOSTS = ["api.anthropic.com"]
 
 @dataclass
 class Event:
-    kind: str           # "text" | "tool" | "ask" | "done" | "ended" | "error"
+    kind: str           # "text" | "tool" | "progress" | "ask" | "done" | "ended" | "error"
     text: str = ""
     tool: str = ""
     raw: Any = None
@@ -126,6 +129,10 @@ class CliRunner(Runner):
     def parse(self, line: str) -> Iterator[Event]:
         yield Event("text", line.rstrip("\n"))
 
+    def max_minutes(self, cfg: Config) -> float:
+        return float((cfg.runners.get(self.name) or {}).get("max_turn_minutes")
+                     or DEFAULT_MAX_TURN_MINUTES)
+
     def turn(self, cfg, project, entry, message, confirm):
         path = sandbox.ensure_repo(cfg, project, entry.get("repo"))
         hosts = sandbox.ensure_egress(sandbox.active_projects(cfg), self.hosts(cfg))
@@ -134,16 +141,40 @@ class CliRunner(Runner):
         if missing:
             raise MethodError(f"the {self.name} runner needs {', '.join(missing)} "
                               "set in this terminal")
+        if entry.pop("interrupted", None):
+            message = INTERRUPTED_NOTE + message
         first = not entry.get("turns")
+        name = f"robert-{project}-{os.getpid()}"
         args = sandbox.container_args(
-            self.image(cfg), f"robert-{project}-{os.getpid()}", project, path,
+            self.image(cfg), name, project, path,
             self.secrets(cfg), self.command(cfg, project, message, first),
             self.mounts(cfg, project))
         proc = subprocess.Popen(["docker", *args], stdin=subprocess.DEVNULL,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                start_new_session=True)
         assert proc.stdout is not None
-        for line in proc.stdout:
-            yield from self.parse(line)
+        heard = False
+        try:
+            for item in stream_with_progress(proc, self.max_minutes(cfg)):
+                if isinstance(item, Event):
+                    yield item
+                    continue
+                for event in self.parse(item):
+                    heard = heard or event.kind in ("text", "tool")
+                    yield event
+        except (KeyboardInterrupt, TurnTimeout) as stop:
+            sandbox.stop_container(name)
+            proc.wait()
+            if heard:
+                entry["turns"] = entry.get("turns", 0) + 1  # its conversation was saved
+            entry["interrupted"] = True
+            why = ("you stopped it" if isinstance(stop, KeyboardInterrupt)
+                   else f"it reached the {self.max_minutes(cfg):g}-minute limit")
+            yield Event("error", f"The turn ended early because {why}. Its work so far is "
+                                 f"in {path}; your next message continues from there.")
+            yield Event("text", f"[{sandbox.push(path)}]")
+            yield Event("done")
+            return
         code = proc.wait()
         if code != 0:
             yield Event("error", (proc.stderr.read() if proc.stderr else "")[-1500:]
@@ -153,6 +184,47 @@ class CliRunner(Runner):
             entry["turns"] = entry.get("turns", 0) + 1
         yield Event("text", f"[{sandbox.push(path)}]")
         yield Event("done")
+
+
+DEFAULT_MAX_TURN_MINUTES = 20
+PROGRESS_EVERY = 30.0
+INTERRUPTED_NOTE = ("[Your previous turn was stopped before you finished. Check "
+                    "`git status` for work in progress, then carry on.]\n\n")
+
+
+class TurnTimeout(Exception):
+    pass
+
+
+def stream_with_progress(proc: Any, max_minutes: float,
+                         every: float = PROGRESS_EVERY) -> Iterator[Any]:
+    """Yield the process's stdout lines as they come, and a progress Event whenever
+    it has been quiet for `every` seconds, so a long tool call is never silent.
+    Raises TurnTimeout once the turn has run for `max_minutes`."""
+    lines: queue.Queue = queue.Queue()
+
+    def read() -> None:
+        for line in proc.stdout:
+            lines.put(line)
+        lines.put(None)
+
+    threading.Thread(target=read, daemon=True).start()
+    started = time.monotonic()
+    while True:
+        try:
+            line = lines.get(timeout=every)
+        except queue.Empty:
+            elapsed = time.monotonic() - started
+            if elapsed > max_minutes * 60:
+                raise TurnTimeout()
+            yield Event("progress", f"still working ({int(elapsed // 60)}m "
+                                    f"{int(elapsed % 60):02d}s)")
+            continue
+        if line is None:
+            return
+        if time.monotonic() - started > max_minutes * 60:
+            raise TurnTimeout()
+        yield line
 
 
 class ClaudeCode(CliRunner):
