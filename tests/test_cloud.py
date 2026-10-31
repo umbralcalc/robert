@@ -179,3 +179,16 @@ def test_docker_not_running_is_a_plain_error(monkeypatch):
         sandbox.ensure_egress([])
     with pytest.raises(MethodError, match="failed to connect to the docker API"):
         sandbox._docker("network", "create", "x")
+
+
+def test_a_running_proxy_reloads_its_allowlist_with_hup(monkeypatch, tmp_path):
+    from robert.cloud import sandbox
+    calls = []
+    monkeypatch.setenv("ROBERT_HOME", str(tmp_path))
+    monkeypatch.setattr(sandbox, "ensure_docker", lambda: None)
+    monkeypatch.setattr(sandbox, "_exists", lambda kind, name: True)
+    monkeypatch.setattr(sandbox, "_docker", lambda *a, **k: calls.append(a))
+    hosts = sandbox.ensure_egress([], ["api.example.com"])
+    assert "api.example.com" in hosts
+    assert calls == [("kill", "--signal", "HUP", sandbox.PROXY)]
+    assert "api.example.com" in (tmp_path / "cloud/egress/allowlist.txt").read_text()

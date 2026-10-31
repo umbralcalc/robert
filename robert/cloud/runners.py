@@ -128,7 +128,8 @@ class CliRunner(Runner):
 
     def turn(self, cfg, project, entry, message, confirm):
         path = sandbox.ensure_repo(cfg, project, entry.get("repo"))
-        sandbox.ensure_egress(sandbox.active_projects(cfg), self.hosts(cfg))
+        hosts = sandbox.ensure_egress(sandbox.active_projects(cfg), self.hosts(cfg))
+        yield Event("text", f"[sandbox can reach: {', '.join(hosts)}]")
         missing = [n for n in self.secrets(cfg) if not os.environ.get(n)]
         if missing:
             raise MethodError(f"the {self.name} runner needs {', '.join(missing)} "
