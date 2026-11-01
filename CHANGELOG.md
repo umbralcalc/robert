@@ -13,6 +13,8 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-01
+
 ### Changed
 
 - **robert locks stochadex v0.26.0 and needs v0.26 or later.** The `stochadex-model` skill
@@ -186,7 +188,8 @@ cloud coding agent.
 - **Releases.** This changelog, a prepare-release PR, tag-on-merge, and a release
   that publishes to PyPI, GitHub Releases and GHCR.
 
-[Unreleased]: https://github.com/umbralcalc/robert/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/umbralcalc/robert/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/umbralcalc/robert/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/umbralcalc/robert/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/umbralcalc/robert/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/umbralcalc/robert/releases/tag/v0.1.0
