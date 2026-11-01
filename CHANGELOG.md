@@ -15,6 +15,16 @@ created with, so a comparison between runs is always like for like.
 
 ### Changed
 
+- **robert locks stochadex v0.26.0 and needs v0.26 or later.** The `stochadex-model` skill
+  now teaches its estimation tools: `vector_mean` with `cumulative: true` (the running mean
+  over every row, at constant cost), the `final_step` output condition (write only the
+  final estimate), and `stochadex expand`. A new `poisson_rate` recipe estimates rates per
+  group from a CSV of counts and exposures, and the `simulation-scientist` skill points count
+  data at it.
+- The dependency tests read versions from the lock, so a lock bump no longer edits them.
+
+### Changed
+
 - **Long turns are never silent and can be stopped cleanly.** While a CLI-runner turn
   is quiet (a long tool call), `robert cloud chat` prints a progress line with the
   elapsed time every 30 seconds. Ctrl-C stops the turn's sandbox, keeps its work, and
