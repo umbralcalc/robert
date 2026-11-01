@@ -232,14 +232,16 @@ TOOLS: list[Tool] = [
 BY_NAME = {t.name: t for t in TOOLS}
 
 
-def _doctor(project: str | None = None) -> dict[str, Any]:
+def _doctor(project: str | None = None, repin: bool = False) -> dict[str, Any]:
     try:
         p = Project.find(project)
     except Exception:
         p = None
-    return support.doctor(p)
+    return support.doctor(p, repin=repin)
 
 
-BY_NAME["doctor"] = Tool("doctor", "Check the stochadex toolchain and version pin.",
-                         {"project": STR}, [], _doctor, needs_project=False)
+BY_NAME["doctor"] = Tool(
+    "doctor", "Check the stochadex toolchain and version pin. `repin` moves the project's "
+    "pins to this robert and the stochadex in use; only with the user's approval.",
+    {"project": STR, "repin": BOOL}, [], _doctor, needs_project=False)
 TOOLS.append(BY_NAME["doctor"])

@@ -15,8 +15,9 @@ robert installs and pins the stochadex binary: `robert setup` downloads the rele
 locks and verifies its checksum, and `robert doctor` reports which binary is in use and
 whether it is in the supported range. Never download stochadex yourself, from `latest` or
 anywhere else: an unpinned binary breaks the project's reproducibility. If `robert doctor`
-reports a problem, stop and tell the user its fix rather than guessing. Authoring is fine
-without the binary, but you cannot *run* a config.
+reports a problem, stop and tell the user its fix rather than guessing. Run
+`robert doctor --repin` only when the user approves it: it moves the project to the
+stochadex in use. Authoring is fine without the binary, but you cannot *run* a config.
 
 `robert run` runs the project's current model with provenance. To call stochadex directly,
 use the path `robert doctor` prints.

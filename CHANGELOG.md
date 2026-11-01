@@ -13,6 +13,15 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A project pinned to a stochadex this robert no longer supports can move forward.**
+  `robert doctor` used to tell such a project to install its pinned version, which robert
+  then refuses. It now says the pin is out of range and offers `robert doctor --repin`,
+  which moves the project's robert, skills and stochadex pins to the versions in use and
+  records the move (from, to and when) under `repins` in `.robert/project.yaml`. Earlier
+  outputs keep their provenance, which names the stochadex that made them.
+
 ## [0.4.0] — 2026-11-01
 
 ### Changed

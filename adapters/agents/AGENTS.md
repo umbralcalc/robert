@@ -25,7 +25,7 @@ Connect the `robert` MCP server (`robert mcp`, stdio) and follow the skills belo
 - `status`: Where the loop stands: next step, gates, partition verdicts, counts.
 - `explain`: Compress an artefact to the user's domain terms: claim, partitions, tests, lineage, beliefs or warrants.
 - `intervene`: Log a redirection: what the agent proposed, what the user (or stand-in) decided, and why. Call it every time the agent is redirected.
-- `doctor`: Check the stochadex toolchain and version pin.
+- `doctor`: Check the stochadex toolchain and version pin. `repin` moves the project's pins to this robert and the stochadex in use; only with the user's approval.
 
 ## Skill: simulation-scientist
 
@@ -236,8 +236,9 @@ robert installs and pins the stochadex binary: `robert setup` downloads the rele
 locks and verifies its checksum, and `robert doctor` reports which binary is in use and
 whether it is in the supported range. Never download stochadex yourself, from `latest` or
 anywhere else: an unpinned binary breaks the project's reproducibility. If `robert doctor`
-reports a problem, stop and tell the user its fix rather than guessing. Authoring is fine
-without the binary, but you cannot *run* a config.
+reports a problem, stop and tell the user its fix rather than guessing. Run
+`robert doctor --repin` only when the user approves it: it moves the project to the
+stochadex in use. Authoring is fine without the binary, but you cannot *run* a config.
 
 `robert run` runs the project's current model with provenance. To call stochadex directly,
 use the path `robert doctor` prints.

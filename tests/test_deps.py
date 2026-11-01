@@ -8,9 +8,9 @@ import anyio
 import httpx
 import pytest
 
-from robert import deps
+from robert import __version__, deps, support
 from robert.mcp_server import http_app
-from robert.project import MethodError
+from robert.project import MethodError, Project
 
 
 @pytest.fixture
@@ -142,3 +142,40 @@ def test_http_mcp_rejects_a_wrong_token():
             return bad.status_code, none.status_code
 
     assert anyio.run(main) == (401, 401)
+
+
+def _pinned_project(root, stochadex_version):
+    (root / ".robert").mkdir(parents=True)
+    (root / ".robert/project.yaml").write_text(
+        f"name: old\nrobert_version: 0.0.1\nskills_version: 0.0.1\n"
+        f"stochadex_version: {stochadex_version}\n")
+    return Project(root)
+
+
+def test_doctor_offers_a_repin_for_an_unsupported_pin(fake_home, monkeypatch, tmp_path):
+    """An old project's pin can't be installed any more, so `setup` is the wrong fix."""
+    lo, _ = _bounds()
+    monkeypatch.setenv("STOCHADEX_BIN", str(fake_stochadex(tmp_path / "b/stochadex", _v(lo))))
+    project = _pinned_project(tmp_path / "p", "v0.19.0")
+    out = support.doctor(project)
+    assert not out["ok"]
+    assert "no longer supports" in out["problems"][0]
+    assert "robert doctor --repin" in out["problems"][0]
+    assert "robert setup" not in out["problems"][0]
+
+
+def test_doctor_repin_moves_the_pins_and_records_the_move(fake_home, monkeypatch, tmp_path):
+    lo, _ = _bounds()
+    monkeypatch.setenv("STOCHADEX_BIN", str(fake_stochadex(tmp_path / "b/stochadex", _v(lo))))
+    project = _pinned_project(tmp_path / "p", "v0.19.0")
+    out = support.doctor(project, repin=True)
+    assert out["ok"], out["problems"]
+    meta = project.meta()
+    assert meta["stochadex_version"] == _v(lo)
+    assert meta["robert_version"] == meta["skills_version"] == __version__
+    assert meta["repins"][0]["from"]["stochadex_version"] == "v0.19.0"
+
+
+def test_doctor_repin_refuses_without_a_binary(fake_home, tmp_path):
+    with pytest.raises(MethodError, match="nothing to re-pin to"):
+        support.doctor(_pinned_project(tmp_path / "p", "v0.19.0"), repin=True)
