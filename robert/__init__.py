@@ -1,4 +1,4 @@
-"""robert: the AI simulation scientist.
+"""Robert: the AI simulation scientist.
 
 A thin method layer over the stochadex engine. It owns the method files and the
 gates of the discovery-and-warrant loop, and delegates every simulation action to

@@ -1,6 +1,6 @@
-# robert
-
-The AI scientific research developer powered by simulations.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/umbralcalc/robert/main/assets/logo.svg" alt="Robert: the AI simulation scientist" width="720">
+</p>
 
 robert is the method layer of an AI simulation scientist. It packages what a
 simulation scientist does as tools that any coding agent can call, and it leaves the
@@ -187,6 +187,7 @@ This runs the whole loop against real stochadex runs:
 | `robert/` | The method CLI and MCP server (`tools.py` is the single registry) |
 | `robert/stochadex.json`, `robert/deps.py` | The stochadex lock, resolver and installer |
 | `install.sh`, `Dockerfile`, `devcontainer-features/` | Install routes: one line, image, dev container |
+| `assets/` | The robert logo |
 | `skills/simulation-scientist/` | The method skill |
 | `skills/stochadex-model/` | The model-authoring skill, moved from stochadex v0.23.0 |
 | `adapters/`, `.claude-plugin/` | Generated per-agent adapters |
