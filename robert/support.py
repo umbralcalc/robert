@@ -1,13 +1,15 @@
-"""Supporting commands: run, graph, plot, status, explain, intervene, doctor."""
+"""Supporting commands: catalogue, run, graph, plot, status, explain, intervene, doctor."""
 
 from __future__ import annotations
 
 import importlib.util
+import re
+from pathlib import Path
 from typing import Any
 
 from . import __version__, deps
 from . import graph as graphs
-from .contracts import check_intervention
+from .contracts import check_intervention, expression_partitions
 from .engine import Engine
 from .loop import _sim_names, lineage, variant
 from .outputs import read, svg_lines
@@ -24,6 +26,74 @@ def run(project: Project, config: str | None = None, sets: list[str] | None = No
         base = []
     r = Engine(project.root).run(config, base + list(sets or []), skip_if_unchanged=not force)
     return {"config": config, **r.summary()}
+
+
+def _words(entry: dict[str, Any]) -> tuple[set[str], set[str]]:
+    """A component's name, and everything else that describes it, as words."""
+    rest = [entry.get("description", "")]
+    for p in entry.get("params", []):
+        rest.append(p["name"])
+    for f in entry.get("fields", []):
+        rest.append(f["name"])
+        rest += [c["name"] + " " + c.get("description", "") for c in f.get("choices", [])]
+        rest += [p["name"] for c in f.get("choices", []) for p in c.get("params", [])]
+        rest += [sub["name"] for sub in f.get("fields", [])]
+    def split(text: str) -> set[str]:
+        return set(re.findall(r"[a-z0-9]+", text.replace("_", " ").lower()))
+    return split(entry["name"]), split(" ".join(rest))
+
+
+def _has(words: set[str], term: str) -> bool:
+    return any(w.startswith(term) for w in words)
+
+
+def _brief(entry: dict[str, Any]) -> dict[str, Any]:
+    """A component as the catalogue states it, nested spec fields cut to their names."""
+    out = {k: entry[k] for k in ("description", "params", "params_incomplete") if k in entry}
+    if entry.get("fields"):
+        out["fields"] = [{k: (v if k != "fields" else [s["name"] for s in v])
+                          for k, v in f.items()} for f in entry["fields"]]
+    return out
+
+
+def catalogue(search: list[str] | None = None, kinds: list[str] | None = None,
+              limit: int = 12, project: str | None = None) -> dict[str, Any]:
+    """Search what the build registers before writing an expression.
+
+    Every search term is matched against each component's name, description, params,
+    fields and named-function choices; components are ranked by how many terms they
+    match, then by how many of those are in the name. A term matches a word it begins,
+    so `count` finds "counting" and `rate` finds `rates`.
+    """
+    try:
+        root = Project.find(project).root
+    except MethodError:
+        root = Path(project or ".").resolve()
+    cat = Engine(root).catalogue()
+    sections = {k: v for k, v in cat.items() if isinstance(v, list)
+                and (not kinds or k in kinds) and all(isinstance(e, dict) for e in v)}
+    out: dict[str, Any] = {"catalogue_version": cat.get("catalogue_version", 1),
+                           "stochadex": cat.get("version")}
+    if not search:
+        out["names"] = {k: [e["name"] for e in v] for k, v in sections.items()}
+        return out
+    terms = [w for t in search for w in re.findall(r"[a-z0-9]+", t.replace("_", " ").lower())]
+    hits = []
+    for kind, entries in sections.items():
+        for e in entries:
+            if e["name"] == "expression":
+                continue  # the thing a search is meant to avoid
+            name, rest = _words(e)
+            in_name = sum(_has(name, t) for t in terms)
+            matched = sum(_has(name, t) or _has(rest, t) for t in terms)
+            if matched:
+                hits.append((-matched, -in_name, kind, e))
+    hits.sort(key=lambda h: h[:3] + (h[3]["name"],))
+    out["matches"] = [{"kind": kind, "name": e["name"], "matched": -m, **_brief(e)}
+                      for m, _, kind, e in hits[:limit]]
+    out["next"] = ("chain built-ins through params_from_upstream before writing an "
+                   "expression; if none fits, record why_expression for that partition")
+    return out
 
 
 def graph(project: Project, overlay: str | None = None, query: str | None = None,
@@ -89,9 +159,10 @@ def status(project: Project) -> dict[str, Any]:
     side = (project.read_yaml("model/partitions.yaml", {}) or {}).get("partitions", {}) or {}
     lin = lineage(project)
     try:
+        sim = project.read_yaml(variant(project)["config"], {})
         in_model = set(_sim_names(project, variant(project)["config"]))
     except MethodError:
-        in_model = set(side)
+        sim, in_model = {}, set(side)
     by_status: dict[str, list[str]] = {}
     for n, e in side.items():
         by_status.setdefault(e.get("status", "untested") if n in in_model else "retired",
@@ -105,6 +176,9 @@ def status(project: Project) -> dict[str, Any]:
         "current_variant": lin.get("current"),
         "variants": len(lin.get("variants", [])),
         "partitions": by_status,
+        # Built-ins first: how many of the current model's partitions are expressions.
+        "expression_partitions": {"count": len(expression_partitions(sim)),
+                                  "of": len(in_model)},
         "warrants": len(project.ledger_entries("warrants")),
         "experiments": _experiment_counts(project),
         "interventions": len(ints),

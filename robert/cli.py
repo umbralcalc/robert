@@ -57,6 +57,8 @@ def _add_arg(p: argparse.ArgumentParser, name: str, schema: dict[str, Any],
         kw.update(type=json.loads, metavar="JSON")
     elif t == "number":
         kw.update(type=float)
+    elif t == "integer":
+        kw.update(type=int)
     if "enum" in schema:
         kw["choices"] = schema["enum"]
     p.add_argument(flag, required=required, **kw)
@@ -68,7 +70,9 @@ EXAMPLES = {
   robert conjecture --rationale "simplest mechanism: unconstrained growth" \\
     --partitions '{"population": {"role": "structural", "observed": true,
                    "hypothesis": "grows at a constant per-capita rate"},
-                   "season": {"role": "nuisance", "hypothesis": "a weak yearly cycle"}}'""",
+                   "season": {"role": "nuisance", "hypothesis": "a weak yearly cycle",
+                              "why_expression": {"considered": ["periodic"],
+                                "reason": "a sinusoid in t; periodic is a kernel"}}}'""",
     "confront": """example:
   robert confront --config model/confront.yaml --posterior-partitions ols \\
     --indices '{"ols": [6, 7]}'""",

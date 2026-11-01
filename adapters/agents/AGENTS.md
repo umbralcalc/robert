@@ -7,7 +7,7 @@ Connect the `robert` MCP server (`robert mcp`, stdio) and follow the skills belo
 
 - `init`: Scaffold a new project repo and record the domain interview. Ask the user about their domain, what they already know and their level before calling this.
 - `pose`: Write claim.yaml: the question, the claim to establish, its intended use and the conditions it must hold under. Everything later serves this claim.
-- `conjecture`: Register the structure written in model/sim.yaml (via the stochadex-model skill): a role and one-line hypothesis per partition. Gate: stochadex --check, a twice-run harness, sidecar completeness, observables mapped, input licences.
+- `conjecture`: Register the structure written in model/sim.yaml (via the stochadex-model skill): a role and one-line hypothesis per partition, and why_expression for each expression partition. Gate: stochadex --check, a twice-run harness, sidecar completeness, observables mapped, input licences, built-ins first.
 - `confront`: Run an inference config against data and record parameter beliefs in the ledger. Gate: the posterior has converged; weak identifiability is flagged for judgment.
 - `test`: Try to break the claim: run every check in tests.yaml (backtest, process, swap, generalisation, outcome) on the current variant and set a verdict per partition.
 - `discover`: Propose a structural variant where a test failed, and score it against its parent on held-out prediction. Learned (ONNX) structural partitions need recorded mechanistic failures and the user's logged approval.
@@ -19,6 +19,7 @@ Connect the `robert` MCP server (`robert mcp`, stdio) and follow the skills belo
 - `answer`: Record the answer to an experiment: the answer in the user's terms; every assumption it rests on (owner, kind: implementation, operationalisation or belief, and sensitivity); the evidence behind every number; the strongest case against it; every analysis tried; a report on each standing question; and follow-ups, ranked by value, at least one naming the explanations it would tell apart.
 - `standing`: List the standing questions every answer must report on, add the user's own, or retire one. They are the channel for what nobody thought to ask about.
 - `context`: What robert knows so far, compressed: answered questions with their live assumptions, open questions, and follow-ups not yet taken up. With focus, the chain that experiment follows from in full.
+- `catalogue`: Search what this stochadex build registers (iterations, macros, kernels, likelihoods, ...) by name, description, params and fields. The first stop before writing an expression: a built-in, or a chain of them, is faster and already tested.
 - `run`: Run the current variant (or a config) with provenance; skips unchanged runs.
 - `graph`: Render the partition graph from stochadex's own derivation, with one overlay: roles, tests, lineage, warrant or query.
 - `plot`: Chart partitions from a stochadex output. Must name the claim.yaml field it bears on.
@@ -114,7 +115,7 @@ a tool stored something wrongly, call the tool again with corrected arguments.
 | --- | --- | --- | --- |
 | Scaffold | `init` | Interview the user: their domain, what they already know, their level, their words for things | The interview is complete |
 | Pose | `pose` | Turn the experiment's question into the claim to establish, its intended use and the conditions it must hold under | All are named |
-| Conjecture | `conjecture` | Write `model/sim.yaml` with the stochadex-model skill; give each partition a role and a one-line hypothesis | `--check`, a twice-run harness, the sidecar, observables, licences |
+| Conjecture | `conjecture` | Search `catalogue`, then write `model/sim.yaml` with the stochadex-model skill; give each partition a role and a one-line hypothesis, and each expression partition its `why_expression` | `--check`, a twice-run harness, the sidecar, observables, licences, built-ins first |
 | Confront | `confront` | Write an inference config (a macro over the data) and run it | Convergence; weak identifiability is flagged. The ledger records the tolerance: an answer resting on a loosened tolerance or unconverged beliefs must state it as an assumption with `ref` set to the ledger hash |
 | Test | `test` | Write checks in `tests.yaml` that try to break the claim | Every structural partition has a verdict; none failed; a backtest ran |
 | Discover | `discover` | Where a test failed: localise the misfit, propose a variant | It beats its parent on held-out prediction |
@@ -146,8 +147,15 @@ you have not.
 
 **Mechanism first.** Climb a rung only on a recorded failure at the rung below:
 
-1. Expressions and config.
-2. Catalogue iteration types and macros.
+1. Catalogue built-ins and macros: one `{type: ...}` iteration, or a chain of
+   them wired by upstreams. Search `catalogue` first; built-ins are compiled,
+   faster and already tested.
+2. Expressions, for the maths no built-in or chain of built-ins covers. Each
+   expression partition's `conjecture` (or `discover`) entry gives
+   `why_expression`: the catalogue names it `considered` and the `reason` none
+   fits. The
+   conjecture and discover gates check it, and `status` counts expression
+   partitions.
 3. Learned components: trained in Python under `learned/`, frozen to ONNX, run
    through `{type: onnx_inference}`. Only for nuisance partitions at any time, or
    for a structural partition through `discover` after mechanistic variants failed
@@ -247,10 +255,11 @@ use the path `robert doctor` prints.
 
 ```bash
 stochadex --version
-# stochadex v0.25.0 darwin/arm64
+# stochadex v0.27.0 darwin/arm64
 # features: arrow postgres s3          <- portable build
 # features: arrow cblas duckdb postgres s3   <- accelerated build
-stochadex catalogue    # JSON: every registered iteration, source, sink, macro, kernel, ...
+stochadex catalogue    # JSON: every registered iteration, macro, kernel, ..., each with
+                       # a description, the params it reads and its spec fields
 ```
 
 **Two builds exist.** The portable one is pure Go. The accelerated one (`robert setup
@@ -270,12 +279,35 @@ Partitions run concurrently and are wired together only through the config.
 
 Output is one row per step: `<time> <partition> [<state values>]`.
 
-#### A partition's update: two ways
+#### A partition's update: built-in first, expression last
 
-##### (A) `expressions:` — bespoke maths (use this for custom models)
+Every partition's update is either a **built-in** (`iteration: {type: ...}`) or an
+**expression** you write. Reach for a built-in first, and for an expression only for maths no
+built-in, or chain of built-ins, covers.
+
+##### (A) `iteration: {type: ...}` — a built-in (the first stop)
+
+Name the built-in and put the params it reads in `params:`. No expressions entry. Built-ins are
+compiled Go: faster than the expressions DSL, and already tested.
+
+```yaml
+main:
+  partitions:
+  - name: walk
+    iteration: {type: wiener_process}     # params it reads go in params:
+    params: {variances: [1.0, 4.0]}       # a 2-D Wiener process
+    init_state_values: [0.0, 0.0]
+    state_history_depth: 1
+    seed: 7
+  simulation: { ... as above ... }
+```
+
+##### (B) `expressions:` — maths no built-in covers
 
 You write the per-step update as string expressions and define the params, so nothing is implicit.
-This is the primary path for a model that isn't a textbook process.
+Use it for the part of a model that no built-in, or chain of built-ins, expresses: a logistic
+drift, a seasonal forcing, a ratio of two estimates. Keep each expression partition to that part
+and leave the rest to built-ins.
 
 ```yaml
 main:
@@ -332,21 +364,90 @@ ambiguous and the run panics — wrap it: `shared(normal(0,1))` for one sample, 
 `iid(n, normal(0,1))` for n independent samples. A draw whose parameter is already a vector needs
 no wrapper.
 
-##### (B) `iteration: {type: ...}` — a library process (catalogue at the end)
+##### Find the built-in first
 
-For a standard process, name it and put its parameters in `params:`. No expressions entry.
+Before writing an expression, search the catalogue for what the partition does:
+
+```bash
+robert catalogue --search poisson --search rate     # ranked matches, with params and fields
+stochadex catalogue                                  # the whole catalogue, as JSON
+```
+
+Each component has a one-sentence `description`, the `params` it reads from its partition
+(`optional` ones marked, families such as `transitions_from_*` by pattern), and its spec
+`fields` (`required` ones marked; a named-function field lists its `choices`, each with the
+params it reads). Search by what the partition *does* (count, rate, mean, replay, mean
+reversion), not by what you would call it.
+
+A partition is often **a chain of built-ins** rather than one. Ask of each piece of the maths:
+is this a process stochadex already steps, fed by a param another partition computes? If so,
+split it there and wire the pieces with `params_from_upstream` (see "Coupling partitions").
+
+If no built-in or chain fits, write the expression, and say why in that partition's
+`why_expression` when you register it with robert's `conjecture` (or `discover`): `considered`,
+the catalogue names you searched, and `reason`, why none of them, alone or chained, expresses
+it. robert keeps it in `model/partitions.yaml`. Its gates fail an expression partition without
+one, and fail a `considered` name the catalogue doesn't register.
+
+##### Factor the model into built-in partitions
+
+The habit to build: one partition per process, each a built-in where one exists, wired by
+upstreams. A single expression that does everything is slower, and hides which part is bespoke.
+
+**A Cox process: a time-varying rate feeding a counting process.** Don't write the counts as
+`poisson(rate * dt)` inside one expression. The rate is one partition, the counts another, and
+`poisson_process` reads its `rates` from the rate partition within the step:
 
 ```yaml
 main:
   partitions:
-  - name: walk
-    iteration: {type: wiener_process}     # params it reads go in params:
-    params: {variances: [1.0, 4.0]}       # a 2-D Wiener process
-    init_state_values: [0.0, 0.0]
+  - name: rate                          # a positive, randomly varying intensity
+    iteration: {type: geometric_brownian_motion}
+    params: {variances: [0.01]}
+    init_state_values: [2.0]
     state_history_depth: 1
-    seed: 7
-  simulation: { ... as above ... }
+    seed: 1
+  - name: arrivals                      # cumulative counts at that intensity
+    iteration: {type: poisson_process}
+    params: {rates: [2.0]}              # the default; replaced every step by rate's value
+    params_from_upstream: {rates: {upstream: rate}}
+    init_state_values: [0.0]
+    state_history_depth: 1
+    seed: 2
+  simulation:
+    termination_condition: {type: number_of_steps, max_steps: 100}
+    timestep_function: {type: constant, stepsize: 1.0}
+    init_time_value: 0.0
 ```
+
+If the rate is bespoke, say a seasonal cycle, only the `rate` partition becomes an expression
+(`base * (1 + amplitude * sin(2 * pi * t / period))`, with its `why_expression`); `arrivals`
+stays `poisson_process`. The same split gives a Hawkes process: `hawkes_process_intensity`
+feeding `hawkes_process`.
+
+**A running mean of data: a replay feeding an estimator.** Don't accumulate a sum and a count in
+an expression. Replay the data with `from_input` and point a mean iteration at it (with the
+`inputs:` and `simulation:` blocks of "Replaying data into a run" below):
+
+```yaml
+main:
+  partitions:
+  - {name: flow, iteration: {type: from_input, input: obs}, state_history_depth: 1, seed: 0}
+  - name: mean_flow
+    iteration: {type: values_function_cumulative_mean, function: data_values}
+    params_as_partitions: {data_values_partition: [flow]}
+    params_from_upstream: {latest_data_values: {upstream: flow}}
+    init_state_values: [0.0]
+    init_state_from_upstream: latest_data_values   # count the first row too
+    state_history_depth: 1
+    seed: 0
+```
+
+On rows 1, 2, 3, 6 it writes 1, 1.5, 2, 3. `values_function_vector_mean` with a `kernel:` gives a
+windowed or discounted mean instead, and the `vector_mean` macro writes these partitions for you
+(`stochadex expand` shows them). `recipes/poisson_rate.yaml` shows
+where the line falls: the means are built-in, and only the one division no built-in does is an
+expression.
 
 #### Coupling partitions (and the one rule that matters)
 
@@ -374,7 +475,9 @@ A partition reads another partition's state through one of two mechanisms, which
 depend on the other within the same step (neither can go first). Break any such cycle by making at
 least one direction a lag-1 `upstreams` read. For most mutually-coupled models (predator–prey, etc.)
 use lag-1 in both directions — it's the faithful choice for an explicit Euler step. If you do
-deadlock, the run tells you exactly which partitions form the cycle.
+deadlock, the run tells you exactly which partitions form the cycle. The config reference
+(https://stochadex.github.io/pkg/reference.html) sets out how partitions read each other and
+how a step runs.
 
 #### The simulation block (all data specs)
 
@@ -666,10 +769,14 @@ error; it tells you what to fix. The exit code classifies the failure:
 - **Mutual coupling** must break the within-step cycle with a lag-1 `upstreams` read.
 - **A partition named `y`, `n`, `on`, `off`** is fine — names are read as strings.
 - **Params are lists.** A scalar is `[0.5]`, not `0.5`.
-- Prefer `expressions:` for anything custom; reach for a `{type: ...}` iteration only for a
-  standard process you can name in the catalogue.
+- **Built-ins first.** Search `robert catalogue` before writing an expression, and factor the
+  model into built-in partitions wired by upstreams. An expression is for maths no built-in, or
+  chain of them, covers, and its partition records `why_expression`.
 
 #### Catalogue (valid `{type: ...}` names)
+
+A summary. `robert catalogue --search ...` (or `stochadex catalogue`) is the binary's own
+list, with each component's description, params and fields.
 
 **Iterations — standard processes:** `wiener_process` (params: `variances`),
 `ornstein_uhlenbeck` (`mus`,`sigmas`,`thetas`), `geometric_brownian_motion` (`variances`),

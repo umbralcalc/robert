@@ -23,7 +23,9 @@ from .contracts import (
     check_claim,
     check_domain,
     check_partitions,
+    check_expressions,
     check_test_spec,
+    expression_partitions,
     is_learned,
     sim_partitions,
 )
@@ -89,6 +91,23 @@ def _done(project: Project, gate: Gate, written: list[str], next_ok: str, next_f
     result = gate.result(next_ok, next_fail)
     project.record_step(gate.step, gate.passed, result["next"])
     return {"step": gate.step, "written": written, **extra, "gate": result}
+
+
+def builtins(engine: Engine) -> set[str]:
+    """Every component name the build's catalogue registers."""
+    return {e["name"] for v in engine.catalogue().values() if isinstance(v, list)
+            for e in v if isinstance(e, dict) and "name" in e}
+
+
+def _expressions_gate(gate: Gate, engine: Engine, sidecar: dict[str, Any],
+                      sim: dict[str, Any], only: list[str] | None = None) -> dict[str, Any]:
+    """Built-ins first: every expression partition records why no built-in fits."""
+    names = expression_partitions(sim)
+    checked = [n for n in names if only is None or n in only]
+    if checked:
+        gate.all("every expression partition says why no built-in fits",
+                 check_expressions({"partitions": sidecar}, sim, builtins(engine), only=only))
+    return {"expression_partitions": names, "partitions": len(sim_partitions(sim))}
 
 
 def _update_sidecar(project: Project, partitions: dict[str, dict[str, Any]] | None) -> None:
@@ -240,6 +259,7 @@ def conjecture(project: Project, partitions: dict[str, dict[str, Any]],
     gate.check("no learned structural partition before discover", not learned_structural,
                f"{', '.join(learned_structural)}: try stochadex variants first; a structural "
                "partition becomes learned only through discover" if learned_structural else "")
+    expressions = _expressions_gate(gate, engine, side, sim)
 
     written = ["model/partitions.yaml"]
     if gate.passed:
@@ -252,9 +272,10 @@ def conjecture(project: Project, partitions: dict[str, dict[str, Any]],
                 "id": vid, "parent": lin.get("current"), "step": "conjecture",
                 "config": config, "sets": [], "rationale": rationale,
                 "config_sha": digest, "at": now(),
+                "expression_partitions": expressions["expression_partitions"],
             }, make_current=True)
             written.append("model/lineage.yaml")
-    return _done(project, gate, written, "confront", "conjecture",
+    return _done(project, gate, written, "confront", "conjecture", expressions=expressions,
                  graph=graphs.summary(project) if checked.ok else None)
 
 
@@ -425,7 +446,8 @@ def discover(project: Project, id: str, rationale: str, score_script: str,
     par = variant(project, parent)
     config = config or par["config"]
     sets = list(sets if sets is not None else par.get("sets", []))
-    checked = Engine(project.root).check(config, sets)
+    engine = Engine(project.root)
+    checked = engine.check(config, sets)
     gate.check("variant passes stochadex --check", checked.ok,
                "" if checked.ok else checked.summary()["error"])
 
@@ -452,6 +474,14 @@ def discover(project: Project, id: str, rationale: str, score_script: str,
             ok = any(w.get("variant") for w in project.ledger_entries("warrants"))
             gate.check(f"`{name}`: the component it replaces is warranted", ok)
 
+    # Changed or added partitions meet the built-ins-first rule; the parent's met it at
+    # conjecture.
+    variant_sim = project.read_yaml(config, {})
+    revised = {n: {**side.get(n, {}), **e} for n, e in (partitions or {}).items()}
+    added = set(sim) - set(_sim_names(project, par["config"]))
+    expressions = _expressions_gate(gate, engine, {**side, **revised}, variant_sim,
+                                    only=sorted(set(partitions_changed) | added))
+
     evidence: dict[str, Any] = {}
     if checked.ok:
         base = _score(project, score_script, par["config"], par.get("sets", []))
@@ -465,11 +495,12 @@ def discover(project: Project, id: str, rationale: str, score_script: str,
         "id": id, "parent": par["id"], "step": "discover", "config": config, "sets": sets,
         "partitions_changed": partitions_changed, "rationale": rationale,
         "evidence": evidence, "config_sha": sha256_file(project.path(config)), "at": now(),
+        "expression_partitions": expressions["expression_partitions"],
     }, make_current=gate.passed)
     if gate.passed:
         _update_sidecar(project, partitions)
     return _done(project, gate, ["model/lineage.yaml"], "confront", "discover",
-                 current=lineage(project)["current"])
+                 expressions=expressions, current=lineage(project)["current"])
 
 
 # --- compress ---------------------------------------------------------------------
