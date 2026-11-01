@@ -115,7 +115,7 @@ a tool stored something wrongly, call the tool again with corrected arguments.
 | Scaffold | `init` | Interview the user: their domain, what they already know, their level, their words for things | The interview is complete |
 | Pose | `pose` | Turn the experiment's question into the claim to establish, its intended use and the conditions it must hold under | All are named |
 | Conjecture | `conjecture` | Write `model/sim.yaml` with the stochadex-model skill; give each partition a role and a one-line hypothesis | `--check`, a twice-run harness, the sidecar, observables, licences |
-| Confront | `confront` | Write an inference config (a macro over the data) and run it | Convergence; weak identifiability is flagged |
+| Confront | `confront` | Write an inference config (a macro over the data) and run it | Convergence; weak identifiability is flagged. The ledger records the tolerance: an answer resting on a loosened tolerance or unconverged beliefs must state it as an assumption with `ref` set to the ledger hash |
 | Test | `test` | Write checks in `tests.yaml` that try to break the claim | Every structural partition has a verdict; none failed; a backtest ran |
 | Discover | `discover` | Where a test failed: localise the misfit, propose a variant | It beats its parent on held-out prediction |
 | Compress | `compress` | Where the claim holds: merge or remove what does not carry it | The claim metric moved less than the tolerance |
