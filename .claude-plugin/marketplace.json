@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Robert: the AI simulation scientist. Answers questions about real systems with stochadex simulations, with every gate enforced by the robert MCP server.",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "plugins": [
     {
