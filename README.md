@@ -49,7 +49,7 @@ flowchart LR
 | `init` | repo skeleton, `domain.yaml` | Domain interview complete |
 | `pose` | `claim.yaml` | Question, claim, intended use and conditions named |
 | `conjecture` | `model/partitions.yaml`, lineage root | `stochadex --check`; twice-run harness; a role and hypothesis per partition; observables mapped; input licences |
-| `confront` | `ledger/beliefs.jsonl` | Posterior converged; weak identifiability flagged |
+| `confront` | `ledger/beliefs.jsonl` | Posterior converged; weak identifiability flagged; the tolerance used is recorded |
 | `test` | `tests.yaml` verdicts | Every structural partition passed; a backtest ran |
 | `discover` | a variant in `model/lineage.yaml` | Beats its parent on held-out prediction; ladder rule for learned partitions |
 | `compress` | a smaller variant | Claim metric unchanged within tolerance; generalisation |

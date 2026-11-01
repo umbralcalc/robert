@@ -162,7 +162,9 @@ TOOLS: list[Tool] = [
               "assumption": STR, "owner": {"type": "string", "enum": experiments.OWNERS},
               "kind": {"type": "string", "enum": experiments.CHOICE_KINDS},
               "sensitivity": {"type": "string", "enum": experiments.SENSITIVITY},
-              "why": STR}}},
+              "why": STR,
+              "ref": {**STR, "description": "the ledger hash, when the assumption is how "
+                      "a belief was judged (a loosened or failed convergence)"}}}},
           "evidence": {"type": "array", "items": {"type": "object", "properties": {
               "kind": {"type": "string", "enum": experiments.EVIDENCE_KINDS},
               "ref": {**STR, "description": "out/ path, ledger hash, test id, query id "

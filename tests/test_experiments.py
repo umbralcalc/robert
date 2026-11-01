@@ -120,3 +120,45 @@ def test_superseding_an_answer(project):
     ans(project, e2, "revised view", [ROBERT_OWNS], [], supersedes=e1)
     assert ex.get(project, e1)["status"] == "superseded"
     assert ex.context(project)["answered"][0]["id"] == "E002"
+
+
+def _belief(project, tolerance, converged=True):
+    return project.append_ledger("beliefs", {
+        "kind": "parameters", "variant": None, "config": "model/confront.yaml",
+        "posterior": {"rate": {"mean": [1.0], "sd": [0.1]}},
+        "convergence": {"tolerance": tolerance, "default_tolerance": 0.05,
+                        "converged": converged, "drift": {"rate": 0.066}}})["hash"]
+
+
+@pytest.mark.parametrize("tolerance,converged,owed", [
+    (0.07, True, "looser than the default"),
+    (0.05, False, "did not converge"),
+])
+def test_loosened_or_unconverged_beliefs_must_be_stated(project, tolerance, converged, owed):
+    h = _belief(project, tolerance, converged)
+    eid = ex.ask(project, "How many goals per match?")["experiment"]
+    evidence = [{"kind": "ledger", "ref": h}]
+    out = ans(project, eid, "About 3 goals per match", [ROBERT_OWNS], evidence)
+    failed = {c["check"]: c["detail"] for c in out["gate"]["failed"]}
+    assert owed in failed["loosened or unconverged beliefs are stated as assumptions"]
+
+    stated = {"assumption": "the goal-trend slope drifts within its standard error",
+              "owner": "robert", "kind": "operationalisation", "ref": h}
+    out = ans(project, eid, "About 3 goals per match", [ROBERT_OWNS, stated], evidence)
+    assert out["gate"]["passed"], out["gate"]["failed"]
+    assert ex.get(project, eid)["assumptions"][1]["ref"] == h
+
+
+def test_the_beliefs_the_model_runs_with_count_even_uncited(project):
+    """The latest beliefs for the current variant are owed even when not cited."""
+    _belief(project, 0.07)
+    eid = ex.ask(project, "q")["experiment"]
+    out = ans(project, eid, "3 goals", [ROBERT_OWNS], [{"kind": "output", "ref": "out/match.log"}])
+    assert not out["gate"]["passed"]
+
+
+def test_default_tolerance_beliefs_owe_nothing(project):
+    h = _belief(project, 0.05)
+    eid = ex.ask(project, "q")["experiment"]
+    out = ans(project, eid, "3 goals", [ROBERT_OWNS], [{"kind": "ledger", "ref": h}])
+    assert out["gate"]["passed"], out["gate"]["failed"]
