@@ -24,10 +24,17 @@ robert pose \
   --observables population \
   --metric-script analysis/claim_metric.py
 
-# The agent wrote model/sim.yaml (unconstrained growth) with the stochadex-model skill.
+# The agent wrote model/sim.yaml (unconstrained growth) with the stochadex-model skill,
+# after searching the catalogue (`robert catalogue --search growth --search periodic`).
+# Both partitions are expressions, so each records the built-ins it searched and why
+# none fits.
 robert conjecture --rationale "simplest mechanism: unconstrained growth" --partitions '{
-  "population": {"role": "structural", "hypothesis": "grows at a constant per-capita rate", "observed": true},
-  "season": {"role": "nuisance", "hypothesis": "a weak yearly cycle modulates growth"}}'
+  "population": {"role": "structural", "hypothesis": "grows at a constant per-capita rate", "observed": true,
+    "why_expression": {"considered": ["geometric_brownian_motion", "drift_diffusion"],
+      "reason": "the drift is proportional to the state and floored at 0.1; drift_diffusion takes constant coefficients and geometric_brownian_motion has no drift"}},
+  "season": {"role": "nuisance", "hypothesis": "a weak yearly cycle modulates growth",
+    "why_expression": {"considered": ["periodic", "values_function", "constant_values"],
+      "reason": "a deterministic sinusoid in time; periodic is a kernel over history, and no iteration outputs a function of t"}}}'
 
 robert confront --config model/confront.yaml --posterior-partitions ols \
   --indices '{"ols": [6, 7]}'

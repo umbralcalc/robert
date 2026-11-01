@@ -13,6 +13,36 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Changed
+
+- **The agent writes a model from stochadex's built-ins first, and an expression only
+  for maths no built-in covers.** Built-in iterations are compiled Go: faster than the
+  expressions DSL, and already tested. The skills used to send custom maths to
+  `expressions:` first; now the ladder starts at the catalogue, and the
+  `stochadex-model` skill teaches factoring a model into built-in partitions wired by
+  `params_from_upstream`, with two worked examples: a Cox process (a rate partition
+  feeding `poisson_process`) and a running mean (a `from_input` replay feeding
+  `values_function_cumulative_mean`).
+- **The conjecture and discover gates check it.** Each expression partition (a
+  `main.expressions` entry or `{type: expression}`) gives `why_expression` in its
+  `conjecture` or `discover` entry: the catalogue components it `considered` and the
+  `reason` none of them, alone or chained, fits. The new check "every expression
+  partition says why no built-in fits" fails a partition without one, or one naming a
+  component the catalogue doesn't register. When stochadex can say an expression
+  reimplements a built-in, that suggestion fails the check whatever the reason.
+- **Expression use is counted.** The conjecture and discover results report the
+  expression partitions, each variant in `model/lineage.yaml` records them, and
+  `status` gives `expression_partitions: {count, of}` for the current model.
+- **robert locks stochadex v0.27.0**, whose catalogue (version 2) describes every
+  component with its params and fields. The image's default build arg follows the lock.
+
+### Added
+
+- **`robert catalogue`** searches what the stochadex build registers by name,
+  description, params, fields and named-function choices, ranked by the terms matched:
+  `robert catalogue --search poisson --search rate`. It is the agent's first stop
+  before writing an expression.
+
 ### Fixed
 
 - **A project pinned to a stochadex this robert no longer supports can move forward.**

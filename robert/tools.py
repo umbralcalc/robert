@@ -47,6 +47,13 @@ class Tool:
 
 
 SETS = {**STRS, "description": "stochadex --set overrides, e.g. main.partitions[name=w].seed=7"}
+WHY_EXPRESSION = {
+    "type": "object", "required": ["considered", "reason"],
+    "description": "required for a partition written as an expression: the built-ins "
+                   "searched with `catalogue`, and why none of them, alone or chained "
+                   "through params_from_upstream, expresses it",
+    "properties": {"considered": {**STRS, "description": "catalogue names searched"},
+                   "reason": STR}}
 
 TOOLS: list[Tool] = [
     Tool("init",
@@ -76,12 +83,13 @@ TOOLS: list[Tool] = [
          ["question", "claim", "intended_use", "conditions", "observables"], loop.pose),
     Tool("conjecture",
          "Register the structure written in model/sim.yaml (via the stochadex-model skill): "
-         "a role and one-line hypothesis per partition. Gate: stochadex --check, a twice-run "
-         "harness, sidecar completeness, observables mapped, input licences.",
+         "a role and one-line hypothesis per partition, and why_expression for each "
+         "expression partition. Gate: stochadex --check, a twice-run harness, sidecar "
+         "completeness, observables mapped, input licences, built-ins first.",
          {"partitions": {"type": "object", "additionalProperties": {
               "type": "object", "properties": {
                   "role": {"type": "string", "enum": ROLES}, "hypothesis": STR,
-                  "observed": BOOL}}},
+                  "observed": BOOL, "why_expression": WHY_EXPRESSION}}},
           "rationale": STR, "config": STR},
          ["partitions", "rationale"], loop.conjecture),
     Tool("confront",
@@ -110,7 +118,7 @@ TOOLS: list[Tool] = [
                          "partitions the variant changes or adds",
                          "additionalProperties": {"type": "object", "properties": {
                              "role": {"type": "string", "enum": ROLES}, "hypothesis": STR,
-                             "observed": BOOL}}}},
+                             "observed": BOOL, "why_expression": WHY_EXPRESSION}}}},
          ["id", "rationale", "score_script", "partitions_changed"], loop.discover),
     Tool("compress",
          "Propose a smaller variant once the claim holds. Accepted only if the claim metric "
@@ -200,6 +208,15 @@ TOOLS: list[Tool] = [
          "assumptions, open questions, and follow-ups not yet taken up. With focus, the "
          "chain that experiment follows from in full.",
          {"focus": STR}, [], experiments.context),
+    Tool("catalogue",
+         "Search what this stochadex build registers (iterations, macros, kernels, "
+         "likelihoods, ...) by name, description, params and fields. The first stop "
+         "before writing an expression: a built-in, or a chain of them, is faster and "
+         "already tested.",
+         {"search": {**STRS, "description": "terms, e.g. poisson rate, or count, mean"},
+          "kinds": {**STRS, "description": "catalogue sections to search; default all"},
+          "limit": {"type": "integer"}, "project": STR},
+         [], support.catalogue, needs_project=False),
     Tool("run", "Run the current variant (or a config) with provenance; skips unchanged runs.",
          {"config": STR, "sets": SETS, "force": BOOL}, [], support.run),
     Tool("graph",

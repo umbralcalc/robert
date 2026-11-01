@@ -3,7 +3,14 @@ import json
 import pytest
 import yaml
 
-from robert.contracts import check_claim, check_intervention, check_partitions, check_test_spec
+from robert.contracts import (
+    check_claim,
+    check_expressions,
+    check_intervention,
+    check_partitions,
+    check_test_spec,
+    expression_partitions,
+)
 from robert.project import MARKER, MethodError, Project
 
 
@@ -63,6 +70,42 @@ def test_partitions_sidecar_matches_sim_exactly():
     problems = check_partitions(side, ["a", "b"])
     assert any("`b` is in sim.yaml" in p for p in problems)
     assert any("`ghost` is not a partition" in p for p in problems)
+
+
+SIM = {"main": {
+    "partitions": [{"name": "rate", "params": {"base": [1.0]}},
+                   {"name": "ratio", "iteration": {"type": "expression", "outputs": ["1"]}},
+                   {"name": "arrivals", "iteration": {"type": "poisson_process"}}],
+    "expressions": [{"partition": "rate", "fields": [{"name": "r"}], "outputs": ["base"]}]}}
+BUILTINS = {"poisson_process", "cox_process", "periodic", "expression"}
+
+
+def test_expression_partitions_are_found_both_ways():
+    assert expression_partitions(SIM) == ["rate", "ratio"]
+
+
+def test_every_expression_says_why_no_builtin_fits():
+    why = {"considered": ["cox_process", "periodic"], "reason": "a sinusoid in t"}
+    side = {"partitions": {"rate": {"why_expression": why},
+                           "ratio": {"why_expression": {"considered": ["poisson_process"]}}}}
+    problems = check_expressions(side, SIM, BUILTINS)
+    assert len(problems) == 1 and "`ratio` is an expression" in problems[0]
+    assert check_expressions(side, SIM, BUILTINS, only=["rate", "arrivals"]) == []
+
+
+def test_considered_names_must_be_registered_builtins():
+    side = {"partitions": {n: {"why_expression": {"considered": c, "reason": "r"}}
+                           for n, c in (("rate", ["sine_wave"]), ("ratio", ["expression"]))}}
+    problems = check_expressions(side, SIM, BUILTINS)
+    assert "`sine_wave`" in problems[0] and "`expression`" in problems[1]
+
+
+def test_a_stochadex_suggestion_fails_whatever_the_reason():
+    why = {"considered": ["cox_process"], "reason": "r"}
+    side = {"partitions": {"rate": {"why_expression": why}, "ratio": {"why_expression": why}}}
+    problems = check_expressions(side, SIM, BUILTINS, suggestions={"rate": "cox_process"})
+    assert problems == ["`rate`: stochadex says this expression reimplements `cox_process`; "
+                        "use the built-in"]
 
 
 def test_backtest_must_not_leak():

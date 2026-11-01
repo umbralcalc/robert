@@ -35,9 +35,10 @@ stochadex engine. Read this before changing anything.
   and let the user decide.
 - When the user redirects you, call `intervene` with what you proposed, what they
   decided and why. That log is the project's most valuable output.
-- Climb the ladder only on a recorded failure: expressions and catalogue
-  iterations first, learned (ONNX) components only through `discover`, custom Go
-  last.
+- Climb the ladder only on a recorded failure: catalogue built-ins first (search
+  `catalogue`, and chain them through upstreams), expressions only for maths no
+  built-in covers (each gives `why_expression` to `conjecture`),
+  learned (ONNX) components only through `discover`, custom Go last.
 
 ## Files
 
@@ -48,7 +49,7 @@ stochadex engine. Read this before changing anything.
 | claim.yaml | The claim, its intended use and the conditions it must hold under |
 | domain.yaml | Partition names in the user's terms; what the user already knows |
 | model/sim.yaml | A valid stochadex config and nothing else |
-| model/partitions.yaml | Per partition: role, one-line hypothesis, evidence status |
+| model/partitions.yaml | Per partition: role, one-line hypothesis, evidence status; why no built-in fits an expression |
 | model/lineage.yaml | Every variant, its parent, and the test that justified it |
 | tests.yaml | Check specs and a verdict per partition |
 | ledger/ | Append-only, hash-chained beliefs and warrants |

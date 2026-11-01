@@ -103,6 +103,52 @@ def sim_partitions(sim: dict[str, Any]) -> list[dict[str, Any]]:
     return list(((sim or {}).get("main") or {}).get("partitions") or [])
 
 
+def expression_partitions(sim: dict[str, Any]) -> list[str]:
+    """Partitions whose update is written in the expressions DSL rather than a built-in:
+    an entry in `main.expressions`, or `iteration: {type: expression}`."""
+    main = (sim or {}).get("main") or {}
+    named = {e.get("partition") for e in main.get("expressions") or []}
+    out = []
+    for p in sim_partitions(sim):
+        it = p.get("iteration") or {}
+        if p.get("name") in named or (isinstance(it, dict) and it.get("type") == "expression"):
+            out.append(p["name"])
+    return out
+
+
+def check_expressions(sidecar: dict[str, Any], sim: dict[str, Any], builtins: set[str],
+                      suggestions: dict[str, str] | None = None,
+                      only: list[str] | None = None) -> list[str]:
+    """An expression is for maths no built-in covers, so each one says why.
+
+    `why_expression` names the catalogue components searched (`considered`, each one
+    `stochadex catalogue` registers) and the `reason` none of them, alone or chained
+    through upstreams, expresses the partition. `suggestions` maps a partition to a
+    built-in stochadex says it reimplements; a suggestion fails whatever the reason.
+    """
+    entries = sidecar.get("partitions", {}) or {}
+    problems = []
+    for name in expression_partitions(sim):
+        if only is not None and name not in only:
+            continue
+        if suggestions and name in suggestions:
+            problems.append(f"`{name}`: stochadex says this expression reimplements "
+                            f"`{suggestions[name]}`; use the built-in")
+            continue
+        why = (entries.get(name) or {}).get("why_expression") or {}
+        if not isinstance(why, dict) or not why.get("reason") or not why.get("considered"):
+            problems.append(f"partitions.yaml: `{name}` is an expression; search "
+                            "`robert catalogue` and record `why_expression` (`considered`: "
+                            "the built-ins searched, `reason`: why none fits)")
+            continue
+        unknown = [c for c in why["considered"] if c not in builtins or c == "expression"]
+        if unknown:
+            problems.append(f"partitions.yaml: `{name}` considered "
+                            f"{', '.join(f'`{c}`' for c in unknown)}, which stochadex "
+                            "catalogue does not register as a built-in")
+    return problems
+
+
 def is_learned(partition: dict[str, Any]) -> bool:
     it = partition.get("iteration") or {}
     return isinstance(it, dict) and it.get("type") in LEARNED_TYPES
