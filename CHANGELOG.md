@@ -17,16 +17,18 @@ created with, so a comparison between runs is always like for like.
 
 ### Changed
 
-- **robert locks stochadex v0.26.0 and needs v0.26 or later.** The `stochadex-model` skill
-  now teaches its estimation tools: `vector_mean` with `cumulative: true` (the running mean
-  over every row, at constant cost), the `final_step` output condition (write only the
-  final estimate), and `stochadex expand`. A new `poisson_rate` recipe estimates rates per
-  group from a CSV of counts and exposures, and the `simulation-scientist` skill points count
-  data at it.
-- The dependency tests read versions from the lock, so a lock bump no longer edits them.
-
-### Changed
-
+- **robert locks stochadex v0.26.0 and needs v0.26 or later.** stochadex v0.26 fixes the
+  macro problems trial 2 hit. The `stochadex-model` skill now teaches its estimation
+  tools: `vector_mean` with `cumulative: true` (the running mean over every row, at
+  constant cost), the `final_step` output condition (write only the final estimate), and
+  `stochadex expand`. A new `poisson_rate` recipe estimates rates per group from a CSV of
+  counts and exposures, and the `simulation-scientist` skill points count data at it. The
+  image's default build arg follows the lock.
+- **Cloud projects are local git repos by default.** `robert cloud new` creates the
+  project's repo in the host workspace and nothing leaves the host. `--github` creates a
+  private GitHub repo as well, and `robert cloud publish <project>` adds one later; for a
+  published project the host pushes after each turn, as before. `gh` is needed only for
+  publishing.
 - **Long turns are never silent and can be stopped cleanly.** While a CLI-runner turn
   is quiet (a long tool call), `robert cloud chat` prints a progress line with the
   elapsed time every 30 seconds. Ctrl-C stops the turn's sandbox, keeps its work, and
@@ -35,6 +37,9 @@ created with, so a comparison between runs is always like for like.
 - The agent instructions now ask it to keep turns short: say before a run that will
   take more than a couple of minutes, end the turn before one that will take more
   than about five, and write only the outputs it needs.
+- The README opens with the robert logo, and the package and plugin descriptions lead
+  with the tagline: "Robert: the AI simulation scientist".
+- The dependency tests read versions from the lock, so a lock bump no longer edits them.
 
 ### Fixed
 
@@ -44,19 +49,8 @@ created with, so a comparison between runs is always like for like.
   robert now reloads it with SIGHUP. Each turn of a CLI runner also prints which hosts
   the sandbox can reach, and the agent instructions explain that the host is the
   user's own `robert cloud` process, re-reading `data/licences.yaml` every turn.
-
 - `robert cloud` reports a Docker problem in plain words ("Docker isn't running...")
   instead of a traceback, and passes on docker's own message for any other failure.
-
-### Changed
-
-- **stochadex v0.25.0.** The lock moves to stochadex v0.25.0 and the supported range
-  widens to `>=0.24.0,<0.26.0`. The image's default build arg follows the lock.
-- **Cloud projects are local git repos by default.** `robert cloud new` creates the
-  project's repo in the host workspace and nothing leaves the host. `--github` creates a
-  private GitHub repo as well, and `robert cloud publish <project>` adds one later; for a
-  published project the host pushes after each turn, as before. `gh` is needed only for
-  publishing.
 
 ## [0.3.0] — 2026-10-31
 
