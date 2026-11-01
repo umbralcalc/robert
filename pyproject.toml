@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 # `robert` is taken on PyPI; the command is still `robert`.
 name = "robert-ai"
 dynamic = ["version"]
-description = "The AI simulation scientist: a method CLI and MCP server that drives stochadex projects through the discovery-and-warrant loop."
+description = "Robert: the AI simulation scientist. A method CLI and MCP server that answers questions about real systems with stochadex simulations."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
