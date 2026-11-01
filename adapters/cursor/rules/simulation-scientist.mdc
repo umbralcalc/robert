@@ -166,10 +166,12 @@ the model was not fitted to), `outcome` (scored against resolved reality).
 
 ## Inference for counts
 
-For event counts (goals, cases, arrivals), keep rates positive: put priors with a
-positive lower bound on them (`smc_inference` with `uniform` priors, `lo > 0`), or
-estimate them in closed form (the mean of Poisson counts is the rate's estimate).
-`posterior_estimation`'s Gaussian proposals can step below zero and stop the run.
+For event counts (goals, cases, arrivals), start from the stochadex-model skill's
+`poisson_rate` recipe: the closed-form rate as a cumulative mean over every row, with
+only the final estimate written. It runs in seconds over thousands of rows. When you
+need a posterior rather than a point estimate, keep rates positive with bounded priors
+(`smc_inference` with `uniform` priors, `lo > 0`); `posterior_estimation`'s Gaussian
+proposals can step below zero and stop the run.
 
 ## Talking to the user
 

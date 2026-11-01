@@ -192,10 +192,12 @@ the model was not fitted to), `outcome` (scored against resolved reality).
 
 #### Inference for counts
 
-For event counts (goals, cases, arrivals), keep rates positive: put priors with a
-positive lower bound on them (`smc_inference` with `uniform` priors, `lo > 0`), or
-estimate them in closed form (the mean of Poisson counts is the rate's estimate).
-`posterior_estimation`'s Gaussian proposals can step below zero and stop the run.
+For event counts (goals, cases, arrivals), start from the stochadex-model skill's
+`poisson_rate` recipe: the closed-form rate as a cumulative mean over every row, with
+only the final estimate written. It runs in seconds over thousands of rows. When you
+need a posterior rather than a point estimate, keep rates positive with bounded priors
+(`smc_inference` with `uniform` priors, `lo > 0`); `posterior_estimation`'s Gaussian
+proposals can step below zero and stop the run.
 
 #### Talking to the user
 
@@ -387,7 +389,9 @@ deadlock, the run tells you exactly which partitions form the cycle.
 Results leave a run through a top-level `outputs:` list of views, each
 `{name, condition (default every_step), function}`. With none declared, every step prints to
 stdout. Conditions: `every_step`, `every_n_steps{n}`, `only_given_partitions{partitions:[...]}`,
-`nil`. Functions: `stdout`, `json_log{path}`, `arrow{path}`, `duckdb{path,table}`,
+`final_step` (each partition once, as it stands when the run ends; `{type: final_step,
+partitions: [a, b]}` for only those), `nil`. An estimation run wants `final_step`: its final
+estimate, not a row per step. Functions: `stdout`, `json_log{path}`, `arrow{path}`, `duckdb{path,table}`,
 `websocket{url}` (pushes to a server), `postgres{...}`, `s3{...}`, `nil`. (Don't write
 `simulation.output_condition` / `output_function`: it is deprecated shorthand for one view.)
 With `macros:`, `outputs:` receives the macro results.
@@ -516,6 +520,12 @@ chain (env, shared config, IAM role) — never put them in the config. Optional 
 
 If you name a source this binary doesn't have, the error lists the ones it does.
 
+`vector_mean` with `cumulative: true` is the running mean over every row of its data, the first
+row included, at constant cost per step: the mean an estimation run wants. It takes no `window:`,
+`kernel:` or `params:`. A windowed `vector_mean`, `vector_variance` or `vector_covariance` whose
+`window:` is longer than its input fails when the run starts, so don't use a window as "all
+the data".
+
 Notable macros (all analyse the config's inputs): `vector_mean` / `vector_variance` / `vector_covariance`,
 `grouped_aggregation`, `scalar_regression_stats`, `likelihood_comparison`, and
 `posterior_estimation` (online Bayesian estimation of a simulation's parameters — its spec nests a
@@ -563,7 +573,15 @@ Two decision-making macros also run live, and the distinction between them matte
 For optimising a *policy parameterisation* globally rather than an action sequence from the
 current state, `evolution_strategy_optimisation` is the right tool instead of either.
 
-#### Worked recipes (start here for the inference/optimisation macros)
+#### Worked recipes (start here for estimation, inference and optimisation)
+
+- **`recipes/poisson_rate.yaml`** — closed-form Poisson rates per group from a CSV of counts
+  and exposures: a cumulative `vector_mean` of every row, a `main:` partition dividing the mean
+  counts by the mean exposure, and a `final_step` output. Use it for any rate or average over
+  data (events per minute, per match, per person-year); it counts every row and writes only
+  the estimate. For long data (a row per match and minute), pivot to one count column per group
+  first.
+
 
 The three learning macros have levers that decide whether they *converge* or merely *run* — so
 don't write one from the catalogue alone. Copy the matching recipe in `recipes/` and adapt it.
@@ -609,7 +627,8 @@ Before spending a run, `stochadex --config model.yaml --check` validates the con
 its wiring and the deadlock pre-flight, without running it. `stochadex inspect --io -c
 model.yaml` prints, as JSON, what the run would read and write. `stochadex graph -c
 model.yaml` prints the partition dependency graph (Mermaid, or `--format dot`) and fails
-on a within-step deadlock cycle.
+on a within-step deadlock cycle. `stochadex expand -c model.yaml` prints a `macros:`
+config's expansion, the core-language run it runs as.
 
 `--skip-if-unchanged` skips a run whose file outputs already carry its provenance key (same
 config, inputs, model files and binary); `stochadex inspect --provenance -c model.yaml`
@@ -726,7 +745,7 @@ params) `partition_event` (reads `event_partition_index` / `event_state_value_in
 **Environments** (`mcts_self_play`'s `env:`, and the `mcts_*` iterations' `environment:`):
 `tictactoe` only, unless the binary links a module that called `api.RegisterEnvironment`; the
 `mcts_*` iterations also take `{type: simulation, ...}`.
-**Output view components:** condition `nil|every_step|every_n_steps|only_given_partitions`;
+**Output view components:** condition `nil|every_step|every_n_steps|only_given_partitions|final_step`;
 function `nil|stdout|json_log|websocket` (`websocket` pushes each output to field `url:` as a client).
 **Simulation components:** termination `number_of_steps|time_elapsed`;
 timestep `constant|exponential_distribution|from_history|from_storage` (`from_storage` replays an

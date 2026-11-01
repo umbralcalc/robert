@@ -13,7 +13,7 @@
 # locks (the release workflow passes it in), so the binary is the one stochadex built,
 # tested and released: the accelerated build, with Arrow, Postgres, S3, DuckDB and BLAS.
 
-ARG STOCHADEX_VERSION=0.25.0
+ARG STOCHADEX_VERSION=0.26.0
 ARG PYTHON_VERSION=3.12
 ARG DEBIAN_RELEASE=bookworm
 

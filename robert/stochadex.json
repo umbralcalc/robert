@@ -1,19 +1,19 @@
 {
   "repository": "umbralcalc/stochadex",
-  "version": "v0.25.0",
+  "version": "v0.26.0",
   "supported": [
-    ">=0.24.0",
-    "<0.26.0"
+    ">=0.26.0",
+    "<0.27.0"
   ],
   "sha256": {
-    "stochadex-accel-darwin-amd64": "32799a78c78c0595f30bcfcf0ca71d7ecc4d60603494e9b1a27e5dfbbfe281bd",
-    "stochadex-accel-darwin-arm64": "1c0087f40ab2d4b94ea1bf9bb5d354027356690a82638258757c7c23fcc290b6",
-    "stochadex-accel-linux-amd64": "19e4ee1bc9c6aea84b727bdd3b5576c88c5fa20bdeeee3df2c66a3be716427bf",
-    "stochadex-accel-linux-arm64": "70df78d5efcd60fbb71fa5c92136f51ee6b2fddf57d5e7ccb5ca6ae35f8f0ce8",
-    "stochadex-darwin-amd64": "4efc061b6f7c1e8817b03b6dd8a3d03f58cb7c88861aa0d87d0e07ec08961eac",
-    "stochadex-darwin-arm64": "980014a7878dae36e1c808ec7c3c4b07a8e445b71c736c7667e181019075d17d",
-    "stochadex-linux-amd64": "397d45f088bffc239a41006b5041094c6477feebe784e7e49fd39d3fee80295b",
-    "stochadex-linux-arm64": "53dec1883bb5a07e936b410534e549e32f28447683124184a31b260c6bd368f6",
-    "stochadex-windows-amd64.exe": "339db08646df1bd552e0faaf45142942e37c22ab42c82dfa7faeafbb282d4c8d"
+    "stochadex-accel-darwin-amd64": "352b7b90ba801fd5a9c2a6b7893d465e28a0dbf51f73d756a21127dd008c2f1b",
+    "stochadex-accel-darwin-arm64": "060b72723b5877798d21efb34080d08ef75a982ed677cb0b9245271ea06d6574",
+    "stochadex-accel-linux-amd64": "59c6c0853c664d13d1391ac73e32235e96835865045c47d4742b58f73c6fd082",
+    "stochadex-accel-linux-arm64": "e6a0a4eaab026aff89effcc3e207a2ab6c0eeba56309d27c3f57b371b78ce4b5",
+    "stochadex-darwin-amd64": "a599ef73dc95f654908444dcb9527bb2e9f06a11bd1c5235a562e1ef396078e4",
+    "stochadex-darwin-arm64": "6a4f8fb928f037e4ebf2ff36921a1f1bfeb5c08efdacc55d6690aecc26886853",
+    "stochadex-linux-amd64": "d47282efb8fe16a5b4b010300a5813f867b6a94ec1ae5e1fb000d9b60d3e390f",
+    "stochadex-linux-arm64": "124667056edfadcf04883fb57863ee63c30476aaa3f98e5a39bf607480da7952",
+    "stochadex-windows-amd64.exe": "478ed629532c116be62df3bdaa78c80fce1f1e0df78f7548b23c0c4027919d9b"
   }
 }
