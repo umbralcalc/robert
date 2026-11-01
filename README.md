@@ -97,7 +97,7 @@ supports, in [robert/stochadex.json](robert/stochadex.json):
 | Resolution order | `STOCHADEX_BIN`, then the managed install of the wanted version, then PATH |
 | Version range | Any binary outside the supported range is refused, with the fix |
 | Checksums | A download that doesn't match the lock (or the release's `SHA256SUMS`) is never installed |
-| Project pin | Each project records the stochadex version it was created with; `doctor` flags drift |
+| Project pin | Each project records the stochadex version it was created with; `doctor` flags drift, and `doctor --repin` moves an older project forward |
 | Updates | A weekly workflow moves the lock to the newest release, tests it, and opens a PR |
 
 robert needs stochadex v0.24 or later: it renders the partition graph with

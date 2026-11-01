@@ -180,19 +180,45 @@ def intervene(project: Project, step: str, actor: str, agent_proposal: str,
     return {"written": ["interventions.yaml"], "logged": entry}
 
 
-def doctor(project: Project | None = None) -> dict[str, Any]:
-    """Check the toolchain against robert's stochadex lock and the project's pin."""
+PINS = ("robert_version", "skills_version", "stochadex_version")
+
+
+def doctor(project: Project | None = None, repin: bool = False) -> dict[str, Any]:
+    """Check the toolchain against robert's stochadex lock and the project's pin.
+
+    With `repin`, move the project's pins to this robert and the stochadex in use: the
+    way forward when the pinned version is one this robert no longer supports.
+    """
     engine = Engine(project.root if project else ".")
     r = engine.resolved
     lock = deps.lock()
+    repinned = None
+    if repin:
+        if project is None:
+            raise MethodError("`--repin` needs a robert project")
+        if r.binary is None:
+            raise MethodError(f"nothing to re-pin to: {r.problem}")
+        meta = project.meta()
+        repinned = {"at": now(),
+                    "from": {k: meta.get(k) for k in PINS},
+                    "to": {"robert_version": __version__, "skills_version": __version__,
+                           "stochadex_version": r.version}}
+        project.set_meta(**repinned["to"],
+                         repins=[*meta.get("repins", []), repinned])
     wanted = (project.meta().get("stochadex_version") if project else None) or lock["version"]
     problems = []
     if r.binary is None:
         problems.append(r.problem)
+    elif project and not deps.supported(wanted):
+        problems.append(f"the project pins stochadex {wanted}, which robert {__version__} "
+                        f"no longer supports ({deps.range_text()}); run "
+                        f"`robert doctor --repin` to move the project to {r.version}")
     elif r.version != wanted:
+        fix = f"run `robert setup --stochadex {wanted}`"
+        if project:
+            fix += f", or `robert doctor --repin` to move the project to {r.version}"
         problems.append(f"using stochadex {r.version} but "
-                        f"{'the project pins' if project else 'robert locks'} {wanted}; "
-                        f"run `robert setup --stochadex {wanted}`")
+                        f"{'the project pins' if project else 'robert locks'} {wanted}; {fix}")
     return {
         "ok": not problems,
         "problems": problems,
@@ -202,4 +228,5 @@ def doctor(project: Project | None = None) -> dict[str, Any]:
                       "locked": lock["version"]},
         "managed_home": str(deps.home()),
         "arrow_support": importlib.util.find_spec("pyarrow") is not None,
+        **({"repinned": repinned} if repinned else {}),
     }
