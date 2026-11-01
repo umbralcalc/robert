@@ -35,6 +35,14 @@ created with, so a comparison between runs is always like for like.
   `status` gives `expression_partitions: {count, of}` for the current model.
 - **robert locks stochadex v0.27.0**, whose catalogue (version 2) describes every
   component with its params and fields. The image's default build arg follows the lock.
+- **A loosened convergence check can no longer pass quietly.** `confront` records how it
+  judged convergence in each ledger entry: the tolerance, the default, whether every
+  partition converged, and each partition's drift. The `answer` gate then requires an
+  assumption, with `ref` set to the ledger hash, for any beliefs the answer rests on that
+  were judged at a looser tolerance than the default or never converged. These are the
+  beliefs it cites, plus the latest for the current variant, which the model runs with.
+  Trial 2 loosened the tolerance from 0.05 to 0.07 and said so; now the ledger shows it,
+  and an answer that leaves it out is refused.
 
 ### Added
 

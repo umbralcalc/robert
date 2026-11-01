@@ -282,15 +282,21 @@ def conjecture(project: Project, partitions: dict[str, dict[str, Any]],
 # --- confront -------------------------------------------------------------------
 
 
+# Relative drift allowed between the last two tenths of an inference run.
+CONVERGENCE_TOLERANCE = 0.05
+
+
 def confront(project: Project, config: str, posterior_partitions: list[str],
              output: str | None = None, sets: list[str] | None = None,
              prior_sd: dict[str, list[float]] | None = None,
              indices: dict[str, list[int]] | None = None,
-             convergence_tolerance: float = 0.05) -> dict[str, Any]:
+             convergence_tolerance: float = CONVERGENCE_TOLERANCE) -> dict[str, Any]:
     """Run inference against data and record the resulting parameter beliefs.
 
     `indices` picks the state slots that hold estimates (a cumulative OLS state also
-    carries running sums, which never converge and are not beliefs).
+    carries running sums, which never converge and are not beliefs). The ledger entry
+    records how convergence was judged, so an answer resting on a loosened tolerance,
+    or on beliefs that never converged, has to say so (see `experiments.answer`).
     """
     gate = Gate("confront")
     gate.check("conjecture gate passed", project.step_passed("conjecture"),
@@ -308,6 +314,7 @@ def confront(project: Project, config: str, posterior_partitions: list[str],
     series = read(project.path(chosen["path"]))
 
     posterior: dict[str, Any] = {}
+    drifts: dict[str, float] = {}
     for p in posterior_partitions:
         pick = (indices or {}).get(p)
         rows = [[s[i] for i in pick] if pick else s for _, s in series.get(p, [])]
@@ -319,6 +326,7 @@ def confront(project: Project, config: str, posterior_partitions: list[str],
         m_tail, sd_tail = mean_sd(tail)
         m_before, _ = mean_sd(before)
         drift = [abs(a - b) / max(abs(a), 1e-9) for a, b in zip(m_tail, m_before)]
+        drifts[p] = round(max(drift), 6)
         gate.check(f"`{p}` converged", max(drift) <= convergence_tolerance,
                    f"relative drift over the last 20% of steps: {max(drift):.3g}")
         m, sd = mean_sd(rows[-max(1, len(rows) // 5):])
@@ -334,6 +342,9 @@ def confront(project: Project, config: str, posterior_partitions: list[str],
         "config": config, "sets": sets or [],
         "output": chosen["path"], "provenance_key": chosen["provenance_key"],
         "posterior": posterior,
+        "convergence": {"tolerance": convergence_tolerance,
+                        "default_tolerance": CONVERGENCE_TOLERANCE,
+                        "converged": gate.passed, "drift": drifts},
     })
     return _done(project, gate, ["ledger/beliefs.jsonl", *[o["path"] for o in outs]],
                  "test", "confront", posterior=posterior, ledger_hash=entry["hash"])

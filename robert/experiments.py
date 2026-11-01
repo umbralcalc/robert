@@ -208,6 +208,27 @@ def _check_evidence(project: Project, ev: dict[str, Any]) -> str | None:
     return None
 
 
+def _convergence_owed(project: Project, evidence: list[dict[str, Any]]) -> dict[str, str]:
+    """Beliefs the answer rests on that were judged loosely or never converged.
+
+    These are the beliefs cited as evidence plus the latest for the current variant,
+    which is what the model runs with. Returns ledger hash -> what is owed.
+    """
+    entries = project.ledger_entries("beliefs")
+    cited = {e.get("ref") for e in evidence if e.get("kind") == "ledger"}
+    current = (project.read_yaml("model/lineage.yaml", {}) or {}).get("current")
+    latest = [e for e in entries if e.get("variant") == current][-1:]
+    owed = {}
+    for e in [x for x in entries if x["hash"] in cited] + latest:
+        c = e.get("convergence") or {}
+        if c.get("converged") is False:
+            owed[e["hash"]] = "these beliefs did not converge"
+        elif c.get("tolerance", 0) > c.get("default_tolerance", float("inf")):
+            owed[e["hash"]] = (f"convergence was judged at tolerance {c['tolerance']}, "
+                               f"looser than the default {c['default_tolerance']}")
+    return owed
+
+
 def answer(project: Project, experiment: str, answer: str,
            assumptions: list[dict[str, Any]], evidence: list[dict[str, Any]],
            against: list[dict[str, Any]], follow_ups: list[dict[str, Any]],
@@ -244,6 +265,13 @@ def answer(project: Project, experiment: str, answer: str,
     gate.check("numbers rest on evidence", not has_numbers or bool(evidence),
                "an answer with numbers must cite the outputs, tests or ledger entries "
                "they come from")
+
+    owed = _convergence_owed(project, evidence)
+    stated = {a.get("ref") for a in assumptions if a.get("assumption")}
+    unstated = [f"{h[:12]}: {why}" for h, why in owed.items() if h not in stated]
+    gate.check("loosened or unconverged beliefs are stated as assumptions", not unstated,
+               "add an assumption with `ref` set to each ledger hash, saying why the answer "
+               "can rest on it: " + "; ".join(unstated) if unstated else "")
 
     gate.check("the strongest case against is stated",
                bool(against) and all(a.get("point") for a in against),
@@ -300,7 +328,7 @@ def answer(project: Project, experiment: str, answer: str,
             "answered_at": now(),
             "answer": answer.strip(),
             "hypotheses": hypotheses,
-            "assumptions": [{**keep(a, ["assumption", "owner", "kind", "why"]),
+            "assumptions": [{**keep(a, ["assumption", "owner", "kind", "why", "ref"]),
                              "sensitivity": a.get("sensitivity", "untested")}
                             for a in assumptions],
             "evidence": evidence,
