@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>robert: the AI simulation scientist</title>
+<meta name="description" content="robert is the method layer of an AI simulation scientist: the tools any coding agent can call to do simulation science on stochadex, with every answer gated, evidenced and logged.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-alt: #f5f7fb;
+    --text: #1a1d24;
+    --muted: #5a6273;
+    --accent: #1c4587;
+    --accent-soft: #e6ecf6;
+    --border: #dde2ea;
+    --code-bg: #0f1a2e;
+    --code-text: #e6ecf6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10141b;
+      --bg-alt: #161b24;
+      --text: #e4e7ed;
+      --muted: #9aa3b2;
+      --accent: #8fb0e8;
+      --accent-soft: #1d2a40;
+      --border: #2a3140;
+      --code-bg: #0a0f18;
+      --code-text: #dbe4f3;
+    }
+    .logo { background: #ffffff; border-radius: 6px; }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  nav {
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 1;
+  }
+  nav .wrap { display: flex; gap: 20px; align-items: center; height: 52px; overflow-x: auto; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 15px; white-space: nowrap; }
+  nav a:hover { color: var(--accent); }
+  nav .brand { color: var(--text); font-weight: 700; margin-right: auto; }
+  header { padding: 56px 0 40px; }
+  .logo { display: block; width: 100%; max-width: 720px; height: auto; }
+  .lede { font-size: 20px; color: var(--muted); margin: 28px 0 24px; }
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 26px; margin: 0 0 16px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  p { margin: 0 0 14px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; }
+  :not(pre) > code { background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+  pre {
+    background: var(--code-bg); color: var(--code-text);
+    padding: 14px 16px; border-radius: 8px; overflow-x: auto;
+    font-size: 14px; line-height: 1.5; margin: 0 0 16px;
+  }
+  .copy { position: relative; }
+  .copy button {
+    position: absolute; top: 8px; right: 8px;
+    background: transparent; color: var(--code-text); border: 1px solid #3a4660;
+    border-radius: 5px; font-size: 12px; padding: 3px 8px; cursor: pointer;
+  }
+  .copy pre { padding-right: 70px; }
+  .table-wrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td:first-child { white-space: nowrap; }
+  .loop {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    margin: 8px 0 20px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px;
+  }
+  .loop span { background: var(--accent-soft); color: var(--accent); padding: 3px 9px; border-radius: 4px; }
+  .loop i { color: var(--muted); font-style: normal; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 8px 0 16px; }
+  .card { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card b { display: block; margin-bottom: 4px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  ol li, ul li { margin-bottom: 6px; }
+  footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#">robert</a>
+    <a href="#what">What it is</a>
+    <a href="#install">Install</a>
+    <a href="#use">Use it</a>
+    <a href="#loop">The loop</a>
+    <a href="https://github.com/umbralcalc/robert">GitHub</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <img class="logo" src="https://raw.githubusercontent.com/umbralcalc/robert/main/assets/logo.svg" alt="Robert: the AI simulation scientist">
+    <p class="lede">
+      robert packages what a simulation scientist does as tools any coding agent can call.
+      You ask a question; robert builds, tests and warrants a stochastic simulation to answer it,
+      and every number in the answer traces back to a real run.
+    </p>
+    <div class="copy">
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/umbralcalc/robert/main/install.sh | sh</code></pre>
+      <button type="button">Copy</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<section id="what">
+  <div class="wrap">
+    <h2>What it is</h2>
+    <p>
+      robert is the <em>method layer</em> of an AI simulation scientist. It leaves the simulation
+      itself to <a href="https://github.com/umbralcalc/stochadex">stochadex</a>, and adds everything
+      a careful scientist does around it: stating the claim, building the model in parts with a
+      hypothesis for each, fitting it to data, testing it, improving or simplifying it, and only
+      then saying what it can be trusted for.
+    </p>
+    <p>
+      The agent does the implementation. You supply judgment where the work is new, and every point
+      where you had to step in is logged. robert exists to test one claim: how far can simulation
+      science be automated? The <a href="https://claude.ai/artifact/XXXKh76eufzP1Jidwmq1mo">design doc</a>
+      has the full argument.
+    </p>
+    <div class="cards">
+      <div class="card"><b>Questions become experiments</b><p>Each question is an experiment file holding the answer, its assumptions, its evidence and suggested follow-ups.</p></div>
+      <div class="card"><b>The agent never produces a number</b><p>Every figure comes from a stochadex run, with its config, seed and provenance recorded.</p></div>
+      <div class="card"><b>Gates, not templates</b><p>The MCP server checks each step before the next can start, so every agent is held to the same standard.</p></div>
+      <div class="card"><b>Answers argue against themselves</b><p>Every answer states the strongest case against it and lists every analysis that was tried.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p>One line installs robert, the stochadex release it locks, and the agent integrations:</p>
+    <div class="copy">
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/umbralcalc/robert/main/install.sh | sh</code></pre>
+      <button type="button">Copy</button>
+    </div>
+    <p>The installer puts the <code>robert-ai</code> package in an isolated tool environment (using uv, then pipx, otherwise installing uv first) and runs <code>robert setup</code>, which:</p>
+    <ul>
+      <li>downloads the locked stochadex release into <code>~/.robert/stochadex/&lt;version&gt;/</code> and checks its SHA-256;</li>
+      <li>installs the Claude Code plugin (skills and MCP server) if <code>claude</code> is on your PATH;</li>
+      <li>adds the MCP server to <code>~/.cursor/mcp.json</code> if Cursor is installed.</li>
+    </ul>
+    <p>Check the toolchain at any time with:</p>
+    <div class="copy">
+      <pre><code>robert doctor</code></pre>
+      <button type="button">Copy</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Option</th><th>Effect</th></tr>
+        <tr><td><code>robert setup</code></td><td>Re-run to repair or upgrade the install</td></tr>
+        <tr><td><code>robert setup --accelerated</code></td><td>Use the BLAS + DuckDB build of stochadex</td></tr>
+        <tr><td><code>ROBERT_VERSION=0.4.0</code></td><td>Install a specific release</td></tr>
+        <tr><td><code>ROBERT_NO_AGENTS=1</code></td><td>Skip registering with Claude Code and Cursor</td></tr>
+      </table>
+    </div>
+
+    <h3>Connect another agent</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Agent</th><th>How</th></tr>
+        <tr><td>Claude Code</td><td><code>claude plugin marketplace add umbralcalc/robert</code>, then <code>claude plugin install robert@robert</code></td></tr>
+        <tr><td>Cursor</td><td>Add <code>adapters/cursor/mcp.json</code> to <code>~/.cursor/mcp.json</code> and copy <code>adapters/cursor/rules/</code> into a project's <code>.cursor/rules/</code></td></tr>
+        <tr><td>Anything else</td><td>Point it at <code>adapters/agents/AGENTS.md</code> and run <code>robert mcp</code> as a stdio MCP server</td></tr>
+      </table>
+    </div>
+
+    <h3>In the cloud</h3>
+    <p>
+      The image <code>ghcr.io/umbralcalc/robert:&lt;version&gt;</code> contains robert, the locked
+      stochadex, Python and git. Projects created by <code>robert init</code> open in it as a dev
+      container or Codespace, and any other repo can add the feature
+      <code>ghcr.io/umbralcalc/robert/robert:0</code>. See
+      <a href="https://github.com/umbralcalc/robert/blob/main/cloud/README.md">cloud/README.md</a>
+      for running robert as a cloud agent.
+    </p>
+  </div>
+</section>
+
+<section id="use">
+  <div class="wrap">
+    <h2>Use it</h2>
+    <p>Most of the time you talk to your agent and it calls robert's tools for you. Every command is also an MCP tool with the same arguments, so a project driven through chat leaves the same trail as one driven by hand.</p>
+    <ol>
+      <li><b>Start a project.</b> <code>robert init</code> creates the repo skeleton and interviews you about the domain. The project carries its own <code>.mcp.json</code>, <code>AGENTS.md</code> and dev container, so any agent opened in it finds the tools.</li>
+      <li><b>Ask a question.</b> Tell your agent what you want to know. It runs <code>ask</code>, which opens an experiment in <code>experiments/E###.yaml</code>.</li>
+      <li><b>Let it work the loop.</b> The agent builds and tests a model step by step (below). It asks you what you believe about the world only when the answer depends on it.</li>
+      <li><b>Read the answer.</b> <code>answer</code> records it once the gate is satisfied: assumptions, evidence, the strongest case against, and follow-up questions.</li>
+      <li><b>Go deeper.</b> Take up a follow-up with <code>ask --from-follow-up E002.1</code>. The chain of experiments becomes the context for the next question.</li>
+    </ol>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Tool</th><th>Does</th></tr>
+        <tr><td><code>ask</code></td><td>Opens an experiment for a question or a suggested follow-up</td></tr>
+        <tr><td><code>answer</code></td><td>Records the answer; the gate checks assumptions, evidence and follow-ups</td></tr>
+        <tr><td><code>context</code></td><td>What earlier experiments established, compressed; with <code>--focus</code>, a chain in full</td></tr>
+        <tr><td><code>standing</code></td><td>The questions every answer must report on: contradictions, surprises, operationalisation choices</td></tr>
+        <tr><td><code>status</code>, <code>explain</code></td><td>Where the project stands, and why</td></tr>
+      </table>
+    </div>
+
+    <h3>See it end to end</h3>
+    <p>From a clone of the repository, the worked example runs the whole loop against real stochadex runs:</p>
+    <div class="copy">
+      <pre><code>examples/logistic-growth/walkthrough.sh /tmp/logistic-demo</code></pre>
+      <button type="button">Copy</button>
+    </div>
+    <p>Unconstrained growth fails its backtest; the user redirects; <code>discover</code> adds a carrying capacity that beats its parent on held-out years; <code>compress</code> removes a seasonal nuisance without moving the claim; a forecast is warranted and queried; and a <code>decide</code> query is refused because nothing on the action path was tested.</p>
+  </div>
+</section>
+
+<section id="loop">
+  <div class="wrap">
+    <h2>The loop</h2>
+    <p>This is how robert earns each answer. Each step writes a file, and a gate must pass before the next step can start.</p>
+    <div class="loop">
+      <span>pose</span><i>→</i><span>conjecture</span><i>→</i><span>confront</span><i>→</i><span>test</span><i>→</i><span>discover / compress</span><i>→</i><span>warrant</span><i>→</i><span>query</span><i>→</i><span>revise</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Step</th><th>Gate before moving on</th></tr>
+        <tr><td><code>pose</code></td><td>Question, claim, intended use and conditions named</td></tr>
+        <tr><td><code>conjecture</code></td><td>The config checks and runs reproducibly; each model part has a role and a hypothesis</td></tr>
+        <tr><td><code>confront</code></td><td>The fit to data converged; weak identifiability flagged</td></tr>
+        <tr><td><code>test</code></td><td>Every structural part passed; a backtest ran</td></tr>
+        <tr><td><code>discover</code></td><td>A new variant beats its parent on held-out prediction</td></tr>
+        <tr><td><code>compress</code></td><td>A smaller variant leaves the claim unchanged within tolerance</td></tr>
+        <tr><td><code>warrant</code></td><td>The current variant passed its tests; limits stated</td></tr>
+        <tr><td><code>query</code></td><td>The warrant is strong enough for the kind of question asked</td></tr>
+        <tr><td><code>revise</code></td><td>Monitors watch the model and name their action</td></tr>
+      </table>
+    </div>
+    <p>A failed test sends the agent to <code>discover</code> a better model. Learned (ONNX) components must earn their place there, after mechanistic variants have failed and you have approved.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    robert is open source under the <a href="https://github.com/umbralcalc/robert/blob/main/LICENSE">licence in the repository</a>.
+    Source, changelog and issues are on <a href="https://github.com/umbralcalc/robert">GitHub</a>.
+    Simulations run on <a href="https://github.com/umbralcalc/stochadex">stochadex</a>.
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll(".copy button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = btn.parentElement.querySelector("code").textContent;
+      navigator.clipboard.writeText(text).then(function () {
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = "Copy"; }, 1500);
+      });
+    });
+  });
+</script>
+</body>
+</html>
