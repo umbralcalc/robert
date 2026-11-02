@@ -10,7 +10,7 @@ is new. Every point where the user had to step in is logged.
 
 It is built to test one claim: how far can simulation science be automated?
 The [design doc](https://claude.ai/artifact/XXXKh76eufzP1Jidwmq1mo) has the full
-argument.
+argument, and the [docs site](https://umbralcalc.github.io/robert/) renders this README.
 
 ## Questions and answers
 
@@ -188,6 +188,7 @@ This runs the whole loop against real stochadex runs:
 | `robert/stochadex.json`, `robert/deps.py` | The stochadex lock, resolver and installer |
 | `install.sh`, `Dockerfile`, `devcontainer-features/` | Install routes: one line, image, dev container |
 | `assets/` | The robert logo |
+| `docs/` | The [GitHub Pages site](https://umbralcalc.github.io/robert/), rendered from this README, `cloud/README.md` and the changelog |
 | `skills/simulation-scientist/` | The method skill |
 | `skills/stochadex-model/` | The model-authoring skill, moved from stochadex v0.23.0 |
 | `adapters/`, `.claude-plugin/` | Generated per-agent adapters |

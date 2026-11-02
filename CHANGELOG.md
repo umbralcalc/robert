@@ -13,6 +13,12 @@ created with, so a comparison between runs is always like for like.
 
 ## [Unreleased]
 
+### Added
+
+- **A GitHub Pages site** at https://umbralcalc.github.io/robert/, rendered by
+  `docs/build.sh` from the README, the cloud guide and this changelog, and deployed by
+  the `pages` workflow on every push to main that changes them.
+
 ### Changed
 
 - **A loosened convergence check can no longer pass quietly.** `confront` records how it
