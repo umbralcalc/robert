@@ -117,14 +117,16 @@ def expression_partitions(sim: dict[str, Any]) -> list[str]:
 
 
 def check_expressions(sidecar: dict[str, Any], sim: dict[str, Any], builtins: set[str],
-                      suggestions: dict[str, str] | None = None,
+                      suggestions: dict[str, dict[str, Any]] | None = None,
                       only: list[str] | None = None) -> list[str]:
     """An expression is for maths no built-in covers, so each one says why.
 
     `why_expression` names the catalogue components searched (`considered`, each one
     `stochadex catalogue` registers) and the `reason` none of them, alone or chained
-    through upstreams, expresses the partition. `suggestions` maps a partition to a
-    built-in stochadex says it reimplements; a suggestion fails whatever the reason.
+    through upstreams, expresses the partition. `suggestions` maps a partition to what
+    `stochadex inspect --suggest` says of it: the built-in it restates, and the `yaml` to
+    replace it with. stochadex has run both and they agree, so a suggestion fails whatever
+    the reason.
     """
     entries = sidecar.get("partitions", {}) or {}
     problems = []
@@ -132,8 +134,10 @@ def check_expressions(sidecar: dict[str, Any], sim: dict[str, Any], builtins: se
         if only is not None and name not in only:
             continue
         if suggestions and name in suggestions:
-            problems.append(f"`{name}`: stochadex says this expression reimplements "
-                            f"`{suggestions[name]}`; use the built-in")
+            problems.append(f"`{name}`: stochadex ran this expression and the built-in "
+                            f"`{suggestions[name]['iteration']}` and they agree at every "
+                            "step; replace the partition with:\n"
+                            f"{suggestions[name]['yaml']}")
             continue
         why = (entries.get(name) or {}).get("why_expression") or {}
         if not isinstance(why, dict) or not why.get("reason") or not why.get("considered"):

@@ -80,6 +80,12 @@ Use it for the part of a model that no built-in, or chain of built-ins, expresse
 drift, a seasonal forcing, a ratio of two estimates. Keep each expression partition to that part
 and leave the rest to built-ins.
 
+`stochadex inspect --suggest -c sim.yaml` lists any expression that restates a built-in, with the
+YAML to replace it (a part the built-in can't take as a param moves into a partition of its own).
+It runs the config both ways for a few steps, so it reads the inputs, and only prints a
+replacement that agrees at every step. It won't find a built-in that takes a kernel, likelihood
+or function, so it doesn't replace searching the catalogue.
+
 ```yaml
 main:
   partitions:

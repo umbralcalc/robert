@@ -11,6 +11,7 @@ working directory, so relative paths in a config mean the same thing everywhere.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,10 +37,10 @@ PROVENANCE_SUFFIX = ".provenance.json"
 
 def _json_tail(text: str) -> Any:
     """stochadex prints a provenance banner line before its JSON; skip to the JSON."""
-    start = text.find("{")
-    if start < 0:
+    start = re.search(r"^[{\[]", text, re.MULTILINE)
+    if start is None:
         raise MethodError(f"stochadex printed no JSON:\n{text.strip()}")
-    return json.loads(text[start:])
+    return json.loads(text[start.start():])
 
 
 @dataclass
@@ -118,6 +119,17 @@ class Engine:
         r = self._call(["inspect", "--io", "-c", config, *self._sets(sets)])
         if not r.ok:
             raise MethodError(f"stochadex inspect --io failed: {r.summary()['error']}")
+        return _json_tail(r.stdout)
+
+    def inspect_suggest(self, config: str, sets: list[str] | None = None) -> list[dict[str, Any]]:
+        """Each expression partition that restates a built-in, with the YAML to replace it.
+
+        stochadex checks a suggestion by running the config both ways, so this runs the
+        config (capped at a few steps) and reads its inputs.
+        """
+        r = self._call(["inspect", "--suggest", "-c", config, *self._sets(sets)])
+        if not r.ok:
+            raise MethodError(f"stochadex inspect --suggest failed: {r.summary()['error']}")
         return _json_tail(r.stdout)
 
     def provenance_key(self, config: str, sets: list[str] | None = None) -> str:
