@@ -103,9 +103,10 @@ def test_considered_names_must_be_registered_builtins():
 def test_a_stochadex_suggestion_fails_whatever_the_reason():
     why = {"considered": ["cox_process"], "reason": "r"}
     side = {"partitions": {"rate": {"why_expression": why}, "ratio": {"why_expression": why}}}
-    problems = check_expressions(side, SIM, BUILTINS, suggestions={"rate": "cox_process"})
-    assert problems == ["`rate`: stochadex says this expression reimplements `cox_process`; "
-                        "use the built-in"]
+    problems = check_expressions(side, SIM, BUILTINS, suggestions={"rate": {"iteration": "cox_process", "yaml": "- name: rate\n"}})
+    assert problems == ["`rate`: stochadex ran this expression and the built-in `cox_process` "
+                        "and they agree at every step; replace the partition with:\n"
+                        "- name: rate\n"]
 
 
 def test_backtest_must_not_leak():

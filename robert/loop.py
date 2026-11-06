@@ -99,14 +99,30 @@ def builtins(engine: Engine) -> set[str]:
             for e in v if isinstance(e, dict) and "name" in e}
 
 
+def _suggestions(gate: Gate, engine: Engine, config: str,
+                 sets: list[str] | None) -> dict[str, dict[str, Any]]:
+    """What stochadex says the config's expressions restate. A config that can't be
+    checked this way is noted, not failed: whether it runs is for the gates that run it."""
+    try:
+        return {s["partition"]: s for s in engine.inspect_suggest(config, sets)}
+    except MethodError as err:
+        gate.note(f"stochadex could not check whether an expression restates a built-in: {err}")
+        return {}
+
+
 def _expressions_gate(gate: Gate, engine: Engine, sidecar: dict[str, Any],
-                      sim: dict[str, Any], only: list[str] | None = None) -> dict[str, Any]:
-    """Built-ins first: every expression partition records why no built-in fits."""
+                      sim: dict[str, Any], config: str | None,
+                      sets: list[str] | None = None,
+                      only: list[str] | None = None) -> dict[str, Any]:
+    """Built-ins first: every expression partition records why no built-in fits, and none
+    restates a built-in. `config` is None when it failed --check, so can't be asked."""
     names = expression_partitions(sim)
     checked = [n for n in names if only is None or n in only]
     if checked:
+        suggestions = _suggestions(gate, engine, config, sets) if config else {}
         gate.all("every expression partition says why no built-in fits",
-                 check_expressions({"partitions": sidecar}, sim, builtins(engine), only=only))
+                 check_expressions({"partitions": sidecar}, sim, builtins(engine),
+                                   suggestions=suggestions, only=only))
     return {"expression_partitions": names, "partitions": len(sim_partitions(sim))}
 
 
@@ -259,7 +275,7 @@ def conjecture(project: Project, partitions: dict[str, dict[str, Any]],
     gate.check("no learned structural partition before discover", not learned_structural,
                f"{', '.join(learned_structural)}: try stochadex variants first; a structural "
                "partition becomes learned only through discover" if learned_structural else "")
-    expressions = _expressions_gate(gate, engine, side, sim)
+    expressions = _expressions_gate(gate, engine, side, sim, config if checked.ok else None)
 
     written = ["model/partitions.yaml"]
     if gate.passed:
@@ -480,6 +496,7 @@ def discover(project: Project, id: str, rationale: str, score_script: str,
     revised = {n: {**side.get(n, {}), **e} for n, e in (partitions or {}).items()}
     added = set(sim) - set(_sim_names(project, par["config"]))
     expressions = _expressions_gate(gate, engine, {**side, **revised}, variant_sim,
+                                    config if checked.ok else None, sets,
                                     only=sorted(set(partitions_changed) | added))
 
     evidence: dict[str, Any] = {}

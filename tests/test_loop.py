@@ -3,10 +3,13 @@
 import json
 import subprocess
 
+import pytest
 import yaml
 
 from robert import loop
-from robert.project import Project
+from robert.checks import Gate
+from robert.engine import Engine, _json_tail
+from robert.project import MethodError, Project
 
 from .conftest import EXAMPLE, needs_stochadex
 
@@ -144,3 +147,146 @@ def test_catalogue_search_finds_the_builtin(tmp_path, cli_env):
     top = out["matches"][0]
     assert top["name"] == "poisson_process" and top["params"] == [{"name": "rates"}]
     assert "expression" not in {m["name"] for m in out["matches"]}
+
+
+WIENER = "w + sqrt(variances * dt) * shared(normal(0, 1))"
+WHY = {"considered": ["wiener_process"], "reason": "it needs its own form"}
+CLOCK = {"termination_condition": {"type": "number_of_steps", "max_steps": 20},
+         "timestep_function": {"type": "constant", "stepsize": 0.5}, "init_time_value": 0.0}
+
+
+def _walk_sim(update=WIENER):
+    return {"main": {
+        "partitions": [{"name": "walk", "params": {"variances": [2.0]},
+                        "init_state_values": [0.0], "state_history_depth": 1, "seed": 1}],
+        "expressions": [{"partition": "walk", "fields": [{"name": "w"}], "outputs": [update]}],
+        "simulation": CLOCK}}
+
+
+def _project_with(target, cli_env, sim):
+    subprocess.run(["robert", "init", "--path", str(target), "--name", "x", "--no-git",
+                    "--description", "d", "--level", "expert", "--user-knows", "k"],
+                   check=True, capture_output=True, env=cli_env)
+    (target / "model/sim.yaml").write_text(yaml.safe_dump(sim))
+
+
+@needs_stochadex
+def test_an_expression_restating_a_builtin_fails_with_its_replacement(tmp_path, cli_env):
+    """A reason doesn't excuse it, and the YAML in the failure is what passes the gate."""
+    target = tmp_path / "p"
+    _project_with(target, cli_env, _walk_sim())
+    walk = {"role": "structural", "hypothesis": "a random walk", "why_expression": WHY}
+    code, out = _conjecture(target, cli_env, {"walk": walk})
+    assert code == 1
+    detail = {c["check"]: c["detail"] for c in out["gate"]["failed"]}[
+        "every expression partition says why no built-in fits"]
+    assert "`wiener_process`" in detail
+    replacement = yaml.safe_load(detail.split("replace the partition with:\n")[1])
+    assert replacement[0]["iteration"] == {"type": "wiener_process"}
+    assert replacement[0]["params"] == {"variances": [2]}
+
+    sim = _walk_sim()
+    sim["main"]["partitions"] = replacement
+    del sim["main"]["expressions"]
+    (target / "model/sim.yaml").write_text(yaml.safe_dump(sim))
+    code, out = _conjecture(target, cli_env, {"walk": walk})
+    assert code == 0, out["gate"]["failed"]
+    assert out["expressions"]["expression_partitions"] == []
+
+
+@needs_stochadex
+def test_a_replacement_factors_out_what_the_builtin_cannot_take(tmp_path, cli_env):
+    """A rate written into the draw becomes a rate partition feeding the built-in."""
+    target = tmp_path / "p"
+    update = "w + where(shared(uniform(0, 1)) * (2 + sin(t) + 1 / dt) < 2 + sin(t), 1, 0)"
+    _project_with(target, cli_env, _walk_sim(update))
+    walk = {"role": "structural", "hypothesis": "arrivals", "why_expression": WHY}
+    code, out = _conjecture(target, cli_env, {"walk": walk})
+    assert code == 1
+    detail = out["gate"]["failed"][0]["detail"]
+    replacement = yaml.safe_load(detail.split("replace the partition with:\n")[1])
+    assert [p["name"] for p in replacement] == ["walk_rates", "walk"]
+    assert replacement[1]["iteration"] == {"type": "poisson_process"}
+    assert replacement[1]["params_from_upstream"] == {"rates": {"upstream": "walk_rates"}}
+
+
+@needs_stochadex
+def test_discover_asks_about_the_variant_as_it_will_run(tmp_path, cli_env):
+    """The suggestion comes from the variant's config with its sets applied."""
+    target = tmp_path / "p"
+    _expression_project(target, cli_env)
+    why = {"considered": ["cox_process"], "reason": "a sinusoid in t"}
+    code, out = _conjecture(target, cli_env, {
+        "rate": {"role": "structural", "hypothesis": "h", "why_expression": why},
+        "arrivals": {"role": "structural", "hypothesis": "h"}})
+    assert code == 0, out["gate"]["failed"]
+
+    sim = yaml.safe_load((target / "model/sim.yaml").read_text())
+    sim["main"]["partitions"] += _walk_sim()["main"]["partitions"]
+    sim["main"]["expressions"] += _walk_sim()["main"]["expressions"]
+    (target / "model/variant.yaml").write_text(yaml.safe_dump(sim))
+    (target / "score.py").write_text('print(\'{"score": 1}\')\n')
+    out = loop.discover(Project(target), "walk", "r", "score.py", ["walk"],
+                        config="model/variant.yaml",
+                        sets=["main.partitions[name=walk].params.variances=[9.0]"],
+                        partitions={"walk": {"role": "structural", "hypothesis": "h",
+                                             "why_expression": WHY}})
+    detail = {c["check"]: c["detail"] for c in out["gate"]["failed"]}[
+        "every expression partition says why no built-in fits"]
+    assert "`wiener_process`" in detail and "variances: [9]" in detail
+
+    # `rate` isn't what this variant changes, so only the walk is held to account.
+    gate = Gate("discover")
+    side = {"rate": {"why_expression": why}, "walk": {"why_expression": WHY}}
+    loop._expressions_gate(gate, Engine(target), side, sim, "model/variant.yaml", only=["rate"])
+    assert gate.passed
+
+
+@needs_stochadex
+def test_a_config_stochadex_cannot_run_gets_a_note_not_a_failure(tmp_path):
+    """--check reads no inputs, so a missing one first shows when suggesting runs the config."""
+    sim = _walk_sim()
+    sim["inputs"] = {"obs": {"source": {"csv": {"path": "absent.csv", "time_column": 0,
+                                                "state_columns": {"flow": [1]}}}}}
+    sim["main"]["partitions"].append({"name": "flow", "iteration": {"type": "from_input", "input": "obs"},
+                                      "init_state_values": [0.0], "state_history_depth": 1, "seed": 0})
+    (tmp_path / "sim.yaml").write_text(yaml.safe_dump(sim))
+    engine = Engine(tmp_path)
+    with pytest.raises(MethodError, match="inspect --suggest failed"):
+        engine.inspect_suggest("sim.yaml")
+
+    gate = Gate("conjecture")
+    loop._expressions_gate(gate, engine, {"walk": {"why_expression": WHY}}, sim, "sim.yaml")
+    assert gate.passed
+    assert len(gate.notes) == 1 and "could not check whether an expression" in gate.notes[0]
+
+
+@needs_stochadex
+def test_a_config_failing_check_is_not_asked_for_suggestions(tmp_path, cli_env):
+    target = tmp_path / "p"
+    sim = _walk_sim()
+    sim["main"]["simulation"] = {**CLOCK, "typo": 1}
+    _project_with(target, cli_env, sim)
+    walk = {"role": "structural", "hypothesis": "h", "why_expression": WHY}
+    code, out = _conjecture(target, cli_env, {"walk": walk})
+    assert code == 1
+    assert "stochadex --check" in {c["check"] for c in out["gate"]["failed"]}
+    assert "for_your_judgment" not in out["gate"]
+
+
+@needs_stochadex
+def test_no_suggestion_is_asked_for_without_an_expression_to_check(tmp_path):
+    """Suggesting runs the config, so a config with nothing to judge isn't run for it."""
+    sim = _walk_sim()
+    (tmp_path / "sim.yaml").write_text("not: a config\n")
+    gate = Gate("discover")
+    loop._expressions_gate(gate, Engine(tmp_path), {}, sim, "sim.yaml", only=["other"])
+    assert gate.passed and gate.notes == []
+
+
+def test_json_tail_finds_an_object_or_a_list_after_a_banner():
+    assert _json_tail('banner a={b} c=[d]\n{"a": 1}\n') == {"a": 1}
+    assert _json_tail('[\n  {"yaml": "- {type: x}\\n"}\n]\n') == [{"yaml": "- {type: x}\n"}]
+    assert _json_tail("[]\n") == []
+    with pytest.raises(MethodError, match="printed no JSON"):
+        _json_tail("banner a={b}\n")

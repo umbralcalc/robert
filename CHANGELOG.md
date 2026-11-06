@@ -34,8 +34,11 @@ created with, so a comparison between runs is always like for like.
   `conjecture` or `discover` entry: the catalogue components it `considered` and the
   `reason` none of them, alone or chained, fits. The new check "every expression
   partition says why no built-in fits" fails a partition without one, or one naming a
-  component the catalogue doesn't register. When stochadex can say an expression
-  reimplements a built-in, that suggestion fails the check whatever the reason.
+  component the catalogue doesn't register. An expression that `stochadex inspect
+  --suggest` finds restates a built-in fails the check whatever the reason, and the
+  failure gives the YAML to replace it with. stochadex checks each suggestion by running
+  the config both ways, so a config it can't run this way gets a note instead, and a
+  project pinned below stochadex v0.28.0, which has no `--suggest`, gets the same note.
 - **Expression use is counted.** The conjecture and discover results report the
   expression partitions, each variant in `model/lineage.yaml` records them, and
   `status` gives `expression_partitions: {count, of}` for the current model.
