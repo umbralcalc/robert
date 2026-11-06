@@ -39,8 +39,10 @@ created with, so a comparison between runs is always like for like.
 - **Expression use is counted.** The conjecture and discover results report the
   expression partitions, each variant in `model/lineage.yaml` records them, and
   `status` gives `expression_partitions: {count, of}` for the current model.
-- **robert locks stochadex v0.27.0**, whose catalogue (version 2) describes every
-  component with its params and fields. The image's default build arg follows the lock.
+- **robert locks stochadex v0.28.0**, whose catalogue (version 2) describes every
+  component with its params, fields and update rule, and whose `inspect --suggest` finds
+  the built-in an expression partition restates. The image's default build arg follows
+  the lock.
 - **A loosened convergence check can no longer pass quietly.** `confront` records how it
   judged convergence in each ledger entry: the tolerance, the default, whether every
   partition converged, and each partition's drift. The `answer` gate then requires an
