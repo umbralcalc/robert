@@ -274,7 +274,8 @@ stdout. Conditions: `every_step`, `every_n_steps{n}`, `only_given_partitions{par
 partitions: [a, b]}` for only those), `nil`. An estimation run wants `final_step`: its final
 estimate, not a row per step. Functions: `stdout`, `json_log{path}`, `arrow{path}`, `duckdb{path,table}`,
 `websocket{url}` (pushes to a server), `postgres{...}`, `s3{...}`, `nil`. (Don't write
-`simulation.output_condition` / `output_function`: it is deprecated shorthand for one view.)
+`main.simulation.output_condition` / `output_function`: stochadex rejects it at load, with an
+error giving the `outputs:` view to use. An embedded run's own pair is its debug log.)
 With `macros:`, `outputs:` receives the macro results.
 With `run: {mode: ensemble}`, each member writes its own sinks, the shorthand's included: put
 `{member}` or `{seed}` in every view's fields (`path: "run-{member}.log"`, quoted). A view
@@ -312,7 +313,8 @@ Not for `macros:` configs yet.
 A macro expands one of the built-in analysis constructors into a *set* of partitions. The
 config's `inputs:` produce the dataset they analyse — a sub-simulation run for `steps`, or a
 file source — and each macro runs against it. This whole block is data and runs in-process.
-(A top-level `data:` block is deprecated shorthand for `inputs: {data: ...}`; don't write it.)
+(Don't write a top-level `data:` block: stochadex rejects it at load, with an error giving the
+`inputs: {data: ...}` entry to use.)
 
 ```yaml
 # Generate a Normal data stream, then estimate its rolling mean and variance.
