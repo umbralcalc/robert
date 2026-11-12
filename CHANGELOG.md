@@ -42,13 +42,15 @@ created with, so a comparison between runs is always like for like.
 - **Expression use is counted.** The conjecture and discover results report the
   expression partitions, each variant in `model/lineage.yaml` records them, and
   `status` gives `expression_partitions: {count, of}` for the current model.
-- **robert locks stochadex v0.29.2**, whose catalogue (version 2) describes every
+- **robert locks stochadex v0.30.0**, whose catalogue (version 2) describes every
   component with its params, fields and update rule, and whose `inspect --suggest` finds
   the built-in an expression partition restates. stochadex v0.29 removed the top-level
   `data:` block and the main run's `output_condition` / `output_function`, rejecting each
   at load with its `inputs:` or `outputs:` replacement; the `stochadex-model` skill now says
-  so, and no robert config or recipe used either. The image's default build arg follows
-  the lock.
+  so, and no robert config or recipe used either. stochadex v0.30 refuses at load a `lag`
+  past the history its partition keeps, or of a name it cannot read, so `--check` catches
+  both, and `inspect --io` gives each nested run's inner steps per run step. The image's
+  default build arg follows the lock.
 - **A loosened convergence check can no longer pass quietly.** `confront` records how it
   judged convergence in each ledger entry: the tolerance, the default, whether every
   partition converged, and each partition's drift. The `answer` gate then requires an
