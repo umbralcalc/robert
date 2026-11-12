@@ -259,6 +259,14 @@ def _doctor(project: str | None = None, repin: bool = False) -> dict[str, Any]:
     return support.doctor(p, repin=repin)
 
 
+BY_NAME["authoring"] = Tool(
+    "authoring", "How authoring configs has gone: attempts, config failures and retries, "
+    "and how many of each came from a key written at the wrong side of the `main:` level. "
+    "`projects` reports several projects and their total.",
+    {"project": STR, "projects": {**STRS, "description": "project roots to report together"}},
+    [], support.authoring_report, needs_project=False)
+TOOLS.append(BY_NAME["authoring"])
+
 BY_NAME["doctor"] = Tool(
     "doctor", "Check the stochadex toolchain and version pin. `repin` moves the project's "
     "pins to this robert and the stochadex in use; only with the user's approval.",

@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-from . import deps
+from . import authoring, deps
 from .project import MethodError
 
 # stochadex classifies every failure by exit code (see api.ExitCode).
@@ -85,6 +85,7 @@ class Engine:
         proc = subprocess.run(
             [self.bin, *args], cwd=self.root, capture_output=True, text=True
         )
+        authoring.record(self.root, args, proc.returncode, proc.stderr)
         return Result(
             ok=proc.returncode == 0,
             exit_code=proc.returncode,

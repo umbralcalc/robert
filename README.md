@@ -57,7 +57,7 @@ flowchart LR
 | `query` | `queries/<id>.yaml` | The warrant reaches the mode's rung |
 | `revise` | `revise.yaml` | Monitors watch partitions and name their action |
 
-The supporting commands are `catalogue`, `run`, `graph`, `plot`, `status`, `explain`,
+The supporting commands are `catalogue`, `run`, `graph`, `plot`, `status`, `authoring`, `explain`,
 `intervene` and `doctor`. Every command is also an MCP tool with the same arguments, so a
 project driven through chat leaves the same trail as one driven by hand.
 
