@@ -261,8 +261,7 @@ def _doctor(project: str | None = None, repin: bool = False) -> dict[str, Any]:
 
 BY_NAME["authoring"] = Tool(
     "authoring", "How authoring configs has gone: attempts, config failures and retries, "
-    "and how many of each came from a key written at the wrong side of the `main:` level. "
-    "`projects` reports several projects and their total.",
+    "and the failures counted by error. `projects` reports several projects and their total.",
     {"project": STR, "projects": {**STRS, "description": "project roots to report together"}},
     [], support.authoring_report, needs_project=False)
 TOOLS.append(BY_NAME["authoring"])

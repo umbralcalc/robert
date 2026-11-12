@@ -190,7 +190,7 @@ def status(project: Project) -> dict[str, Any]:
 
 def authoring_report(project: str | None = None,
                      projects: list[str] | None = None) -> dict[str, Any]:
-    """How authoring configs has gone: attempts, failures, retries, and the `main:` level's share.
+    """How authoring configs has gone: attempts, failures, retries, and the errors hit.
 
     With projects, each of them and all of them together, for evidence across many runs;
     otherwise the project at, or above, project.

@@ -54,7 +54,7 @@ stochadex engine. Read this before changing anything.
 | tests.yaml | Check specs and a verdict per partition |
 | ledger/ | Append-only, hash-chained beliefs and warrants |
 | interventions.yaml | Append-only log of every redirection |
-| .robert/authoring.jsonl | Every stochadex call on a config: its outcome, and any key on the wrong side of `main:` |
+| .robert/authoring.jsonl | Every stochadex call on a config, and how it came out |
 | out/ | Written only by stochadex, with provenance sidecars |
 | analysis/ | Python: preprocessing, test and score scripts |
 | learned/ | Training scripts for learned components (ONNX) |
