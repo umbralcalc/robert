@@ -18,6 +18,12 @@ created with, so a comparison between runs is always like for like.
 - **A GitHub Pages site** at https://umbralcalc.github.io/robert/, rendered by
   `docs/build.sh` from the README, the cloud guide and this changelog, and deployed by
   the `pages` workflow on every push to main that changes them.
+- **An authoring log.** Every stochadex call robert makes on a project's config appends a
+  line to `.robert/authoring.jsonl`: the command, the config and a hash of its text, the
+  outcome and the first error line. `status` and the new `authoring` tool summarise it:
+  attempts (distinct texts of a config), config failures, retries, and the failures counted
+  by error. `authoring --projects` reports several projects and their total, which shows
+  where authoring a config is hard.
 
 ### Changed
 

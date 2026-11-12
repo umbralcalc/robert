@@ -26,6 +26,7 @@ Connect the `robert` MCP server (`robert mcp`, stdio) and follow the skills belo
 - `status`: Where the loop stands: next step, gates, partition verdicts, counts.
 - `explain`: Compress an artefact to the user's domain terms: claim, partitions, tests, lineage, beliefs or warrants.
 - `intervene`: Log a redirection: what the agent proposed, what the user (or stand-in) decided, and why. Call it every time the agent is redirected.
+- `authoring`: How authoring configs has gone: attempts, config failures and retries, and the failures counted by error. `projects` reports several projects and their total.
 - `doctor`: Check the stochadex toolchain and version pin. `repin` moves the project's pins to this robert and the stochadex in use; only with the user's approval.
 
 ## Skill: simulation-scientist

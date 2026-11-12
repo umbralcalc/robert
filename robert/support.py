@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from . import __version__, deps
+from . import __version__, authoring, deps
 from . import graph as graphs
 from .contracts import check_intervention, expression_partitions
 from .engine import Engine
@@ -182,9 +182,22 @@ def status(project: Project) -> dict[str, Any]:
         "warrants": len(project.ledger_entries("warrants")),
         "experiments": _experiment_counts(project),
         "interventions": len(ints),
+        "authoring": authoring.summary(authoring.entries(project.root)),
         "versions": {k: meta.get(k) for k in ("robert_version", "skills_version",
                                               "stochadex_version")},
     }
+
+
+def authoring_report(project: str | None = None,
+                     projects: list[str] | None = None) -> dict[str, Any]:
+    """How authoring configs has gone: attempts, failures, retries, and the errors hit.
+
+    With projects, each of them and all of them together, for evidence across many runs;
+    otherwise the project at, or above, project.
+    """
+    if projects:
+        return authoring.report([Path(p).expanduser().resolve() for p in projects])
+    return authoring.summary(authoring.entries(Project.find(project).root))
 
 
 def _experiment_counts(project: Project) -> dict[str, int]:
